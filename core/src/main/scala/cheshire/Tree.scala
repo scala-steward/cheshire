@@ -260,9 +260,9 @@ object Tree {
       case _ => None
     }
 
-    def isLeft: Boolean = up.flatMap(_.left).exists(_ == this)
+    def isLeft: Boolean = up.flatMap(_.left).exists(_ eq this)
 
-    def isRight: Boolean = up.flatMap(_.right).exists(_ == this)
+    def isRight: Boolean = up.flatMap(_.right).exists(_ eq this)
 
     def sibling: Option[Button[A]] =
       if (isLeft)
@@ -287,11 +287,10 @@ object Tree {
       tree,
       NonEmptyList.fromList(ancestry).fold(List.empty[Node[B]]) {
         case NonEmptyList(oldParent, ancestry) =>
-          implicit val eq = Eq.fromUniversalEquals[A]
           val oldChild = at
           val newChild = tree
           val newParent =
-            if (oldParent.isLeft(oldChild))
+            if (oldParent.left eq oldChild)
               oldParent.copy(left = newChild)
             else
               oldParent.copy(right = newChild)
@@ -301,7 +300,7 @@ object Tree {
             .scanLeft((oldParent, newParent)) {
               case ((oldChild, newChild), oldParent) =>
                 val newParent =
-                  if (oldParent.isLeft(oldChild))
+                  if (oldParent eq oldChild)
                     oldParent.copy(left = newChild)
                   else
                     oldParent.copy(right = newChild)
