@@ -224,6 +224,9 @@ object Tree {
 
   type Oriented[+A] = Either[A, A]
 
+  def unapply[A](tree: Tree[A]): Some[(A, Option[Tree[A]], Option[Tree[A]])] =
+    Some((tree.value, tree.leftOption, tree.rightOption))
+
   final case class Node[+A](value: A, left: Tree[A], right: Tree[A]) extends Tree[A] {
     override def isLeaf = false
     override def leftOption = Some(left)
