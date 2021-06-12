@@ -38,7 +38,7 @@ sealed abstract class Tree[+A] {
   final def leafCount: Int = (size + 1) / 2
   final def nodeCount: Int = leafCount - 1
 
-  final def zipper: Zipper[A] = Zipper(this, Nil)
+  final def button: Button[A] = Button(this, Nil)
 
   final def isLeft[B >: A: Eq](that: Tree[B]): Boolean =
     leftOption.exists(_ === that)
@@ -90,21 +90,21 @@ sealed abstract class Tree[+A] {
     case Leaf(value) => f(value).map(Leaf(_))
   }
 
-  final def mapWithZipper[B](f: Zipper[A] => B): Tree[B] =
-    traverseWithZipper(c => Eval.now(f(c))).value
+  final def mapWithButton[B](f: Button[A] => B): Tree[B] =
+    traverseWithButton(c => Eval.now(f(c))).value
 
-  final def traverseWithZipper[F[_]: Monad, B](f: Zipper[A] => F[B]): F[Tree[B]] = {
-    def recurse(zipper: Zipper[A]): F[Tree[B]] =
-      (zipper.left, zipper.right) match {
+  final def traverseWithButton[F[_]: Monad, B](f: Button[A] => F[B]): F[Tree[B]] = {
+    def recurse(button: Button[A]): F[Tree[B]] =
+      (button.left, button.right) match {
         case (Some(left), Some(right)) =>
           for {
             l <- recurse(left)
             r <- recurse(right)
-            b <- f(zipper)
+            b <- f(button)
           } yield Node(b, l, r)
-        case _ => f(zipper).map(Leaf(_))
+        case _ => f(button).map(Leaf(_))
       }
-    recurse(zipper)
+    recurse(button)
   }
 
   final def foldPostOrder[B](f: A => B)(g: (A, B, B) => B): B =
@@ -173,7 +173,13 @@ sealed abstract class Tree[+A] {
       case _ => false
     })
 
-  // final def preorder:
+  final def preorder: Button[A] = button
+
+  final def postorder: Button[A] =
+    Monad[Option]
+      .iterateUntilM(button)(_.left)(_.at.isLeaf)
+      // Should never be called
+      .getOrElse(button)
 }
 
 object Tree {
@@ -230,28 +236,51 @@ object Tree {
     override def rightOption = None
   }
 
-  final case class Zipper[+A](at: Tree[A], ancestry: List[Node[A]]) {
+  final case class Button[+A](at: Tree[A], ancestry: List[Node[A]]) {
 
     def value: A = at.value
 
     def tree: Tree[A] = ancestry.lastOption.getOrElse(at)
 
-    def up: Option[Zipper[A]] = ancestry match {
-      case at :: ancestry => Some(Zipper(at, ancestry))
+    def up: Option[Button[A]] = ancestry match {
+      case at :: ancestry => Some(Button(at, ancestry))
       case _ => None
     }
 
-    def left: Option[Zipper[A]] = at match {
-      case at @ Node(_, left, _) => Some(Zipper(left, at :: ancestry))
+    def left: Option[Button[A]] = at match {
+      case at @ Node(_, left, _) => Some(Button(left, at :: ancestry))
       case _ => None
     }
 
-    def right: Option[Zipper[A]] = at match {
-      case at @ Node(_, _, right) => Some(Zipper(right, at :: ancestry))
+    def right: Option[Button[A]] = at match {
+      case at @ Node(_, _, right) => Some(Button(right, at :: ancestry))
       case _ => None
     }
 
-    def replace[B >: A](tree: Tree[B]): Zipper[B] = Zipper(
+    def isLeft: Boolean = up.flatMap(_.left).exists(_ == this)
+
+    def isRight: Boolean = up.flatMap(_.right).exists(_ == this)
+
+    def sibling: Option[Button[A]] =
+      if (isLeft)
+        up.flatMap(_.right)
+      else if (isRight)
+        up.flatMap(_.left)
+      else
+        None
+
+    def nextPreorder: Option[Button[A]] =
+      left.orElse {
+        Monad[Option].iterateUntilM(this)(_.up)(_.isLeft).flatMap(_.sibling)
+      }
+
+    def nextPostorder: Option[Button[A]] =
+      if (isLeft)
+        sibling.flatMap(Monad[Option].iterateUntilM(_)(_.left)(_.at.isLeaf))
+      else
+        up
+
+    def replace[B >: A](tree: Tree[B]): Button[B] = Button(
       tree,
       NonEmptyList.fromList(ancestry).fold(List.empty[Node[B]]) {
         case NonEmptyList(oldParent, ancestry) =>
