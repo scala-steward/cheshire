@@ -27,6 +27,7 @@ addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/he
 
 val CatsVersion = "2.6.1"
 val Specs2Version = "4.12.0"
+val DisciplineVersion = "1.1.6"
 
 lazy val root =
   project.aggregate(core).enablePlugins(NoPublishPlugin)
@@ -40,7 +41,9 @@ lazy val core = project
       "org.typelevel" %% "cats-core" % CatsVersion,
       "dev.optics" %% "monocle-core" % "3.0.0-RC2",
       "org.typelevel" %% "cats-laws" % CatsVersion % Test,
+      "org.typelevel" %% "discipline-specs2" % DisciplineVersion % Test,
       "org.scalacheck" %% "scalacheck" % "1.15.4" % Test,
+      "com.github.alexarchambault" %% "scalacheck-shapeless_1.15" % "1.3.0" % Test,
       "org.specs2" %% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
       "org.specs2" %% "specs2-scalacheck" % Specs2Version % Test cross CrossVersion.for3Use2_13
     )

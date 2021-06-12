@@ -17,11 +17,17 @@
 package cheshire
 
 import cats.Applicative
+import cats.Apply
+import cats.CommutativeApply
 import cats.Eq
 import cats.Eval
 import cats.Functor
 import cats.Monad
+import cats.Monoid
+import cats.NonEmptyTraverse
+import cats.Show
 import cats.data.NonEmptyList
+import cats.kernel.Hash
 import cats.syntax.all._
 import monocle.Lens
 import monocle.Optional
@@ -34,7 +40,7 @@ sealed abstract class Tree[+A] {
   def leftOption: Option[Tree[A]]
   def rightOption: Option[Tree[A]]
 
-  final def size: Int = foldPostOrder(_ => 1)((_, l, r) => 1 + l + r)
+  final def size: Int = reducePostOrder(_ => 1)((l, r, _) => 1 + l + r)
   final def leafCount: Int = (size + 1) / 2
   final def nodeCount: Int = leafCount - 1
 
@@ -58,7 +64,7 @@ sealed abstract class Tree[+A] {
   final def map[B](f: A => B): Tree[B] =
     traverse(a => Eval.now(f(a))).value
 
-  final def traverse[F[_]: Applicative, B](f: A => F[B]): F[Tree[B]] = this match {
+  final def traverse[F[_]: Apply, B](f: A => F[B]): F[Tree[B]] = this match {
     case Node(value, left, right) =>
       (f(value), left.traverse(f), right.traverse(f)).mapN(Node(_, _, _))
     case Leaf(value) => f(value).map(Leaf(_))
@@ -80,7 +86,7 @@ sealed abstract class Tree[+A] {
   final def mapWithOrientedParent[B](f: A => B)(g: (Oriented[A], A) => B): Tree[B] =
     traverseWithOrientedParent(a => Eval.now(f(a)))((p, c) => Eval.now(g(p, c))).value
 
-  final def traverseWithOrientedParent[F[_]: Applicative, B](f: A => F[B])(
+  final def traverseWithOrientedParent[F[_]: Apply, B](f: A => F[B])(
       g: (Oriented[A], A) => F[B]): F[Tree[B]] = this match {
     case Node(value, left, right) =>
       (
@@ -107,16 +113,16 @@ sealed abstract class Tree[+A] {
     recurse(button)
   }
 
-  final def foldPostOrder[B](f: A => B)(g: (A, B, B) => B): B =
-    foldPostOrderM(a => Eval.now(f(a)))((a, l, r) => Eval.now(g(a, l, r))).value
+  final def reducePostOrder[B](f: A => B)(g: (B, B, A) => B): B =
+    reducePostOrderM(a => Eval.now(f(a)))((l, r, a) => Eval.now(g(l, r, a))).value
 
-  final def foldPostOrderM[F[_]: Monad, B](f: A => F[B])(g: (A, B, B) => F[B]): F[B] =
+  final def reducePostOrderM[F[_]: Monad, B](f: A => F[B])(g: (B, B, A) => F[B]): F[B] =
     this match {
       case Node(value, left, right) =>
         for {
-          l <- left.foldPostOrderM(f)(g)
-          r <- right.foldPostOrderM(f)(g)
-          b <- g(value, l, r)
+          l <- left.reducePostOrderM(f)(g)
+          r <- right.reducePostOrderM(f)(g)
+          b <- g(l, r, value)
         } yield b
       case Leaf(value) => f(value)
     }
@@ -150,18 +156,35 @@ sealed abstract class Tree[+A] {
       case Leaf(value) => f(value).map(Leaf(_))
     }
 
-  final def scanPostOrder[B](f: A => B)(g: (A, B, B) => B): Tree[B] =
-    scanPostOrderM(a => Eval.now(f(a)))((a, l, r) => Eval.now(g(a, l, r))).value
+  final def scanPostOrder[B](f: A => B)(g: (B, B, A) => B): Tree[B] =
+    scanPostOrderM(a => Eval.now(f(a)))((l, r, a) => Eval.now(g(l, r, a))).value
 
-  final def scanPostOrderM[F[_]: Monad, B](f: A => F[B])(g: (A, B, B) => F[B]): F[Tree[B]] =
+  final def scanPostOrderM[F[_]: Monad, B](f: A => F[B])(g: (B, B, A) => F[B]): F[Tree[B]] =
     this match {
       case Node(value, left, right) =>
         for {
           l <- left.scanPostOrderM(f)(g)
           r <- right.scanPostOrderM(f)(g)
-          b <- g(value, l.value, r.value)
+          b <- g(l.value, r.value, value)
         } yield Node(b, l, r)
       case Leaf(value) => f(value).map(Leaf(_))
+    }
+
+  final def zip[B](that: Tree[B]): Tree[(A, B)] =
+    zipWithM(that)((a, b) => Eval.now((a, b))).value
+
+  final def zipWith[B, Z](that: Tree[B])(f: (A, B) => Z): Tree[Z] =
+    zipWithM(that)((a, b) => Eval.now(f(a, b))).value
+
+  final def zipWithM[F[_]: Monad, B, Z](that: Tree[B])(f: (A, B) => F[Z]): F[Tree[Z]] =
+    (this, that) match {
+      case (Node(a, thisLeft, thisRight), Node(b, thatLeft, thatRight)) =>
+        for {
+          l <- thisLeft.zipWithM(thatLeft)(f)
+          r <- thisRight.zipWithM(thatRight)(f)
+          z <- f(a, b)
+        } yield Node(z, l, r)
+      case _ => f(this.value, that.value).map(Leaf(_))
     }
 
   final def ===[B >: A: Eq](that: Tree[B]): Boolean =
@@ -172,6 +195,12 @@ sealed abstract class Tree[+A] {
         (thisValue: B) === thatValue
       case _ => false
     })
+
+  final def show[B >: A](implicit show: Show[B]): String = this match {
+    case Node(value, left, right) =>
+      s"Node(${(value: B).show}, ${left.show[B]}, ${right.show[B]})"
+    case Leaf(value) => s"Leaf(${(value: B).show})"
+  }
 
   final def preorder: Button[A] = button
 
@@ -313,4 +342,68 @@ object Tree {
 
   }
 
+  implicit object cheshireApplyForTree
+      extends CommutativeApply[Tree]
+      with NonEmptyTraverse[Tree] {
+
+    override def map[A, B](fa: Tree[A])(f: A => B): Tree[B] = fa.map(f)
+
+    override def ap[A, B](ff: Tree[A => B])(fa: Tree[A]): Tree[B] =
+      ff.zipWith(fa)(_(_))
+
+    override def foldMap[A, B: Monoid](fa: Tree[A])(f: A => B): B =
+      fa.reducePostOrder(f)((l, r, a) => l |+| r |+| f(a))
+
+    override def foldLeft[A, B](fa: Tree[A], b: B)(f: (B, A) => B): B =
+      reduceLeftTo(fa)(f(b, _))(f)
+
+    override def foldRight[A, B](fa: Tree[A], lb: Eval[B])(
+        f: (A, Eval[B]) => Eval[B]): Eval[B] =
+      reduceRightToImpl(fa)(f(_, lb))(f)
+
+    override def reduceLeftTo[A, B](fa: Tree[A])(f: A => B)(g: (B, A) => B): B = {
+      def recurse(fa: Tree[A])(f: A => B): Eval[B] = fa match {
+        case Node(value, left, right) =>
+          for {
+            l <- recurse(left)(f)
+            r <- recurse(right)(g(l, _))
+          } yield g(r, value)
+        case Leaf(value) => Eval.now(f(value))
+      }
+      recurse(fa)(f).value
+    }
+
+    override def reduceRightTo[A, B](fa: Tree[A])(f: A => B)(
+        g: (A, Eval[B]) => Eval[B]): Eval[B] =
+      reduceRightToImpl(fa)(a => Eval.later(f(a)))(g)
+
+    private def reduceRightToImpl[A, B](fa: Tree[A])(f: A => Eval[B])(
+        g: (A, Eval[B]) => Eval[B]): Eval[B] = fa match {
+      case Node(value, left, right) =>
+        val b = Eval.defer(f(value))
+        val r = Eval.defer(reduceRightToImpl(right)(g(_, b))(g))
+        Eval.defer(reduceRightToImpl(left)(g(_, r))(g))
+      case Leaf(value) => Eval.defer(f(value))
+    }
+
+    override def traverse[G[_]: Applicative, A, B](fa: Tree[A])(f: A => G[B]): G[Tree[B]] =
+      fa.traverse(f)
+
+    override def nonEmptyTraverse[G[_]: Apply, A, B](fa: Tree[A])(f: A => G[B]): G[Tree[B]] =
+      fa.traverse(f)
+  }
+
+  implicit def cheshireShowForTree[A: Show]: Show[Tree[A]] =
+    new Show[Tree[A]] {
+      override def show(t: Tree[A]): String = t.show
+    }
+
+  implicit def cheshireEqForTree[A: Eq]: Eq[Tree[A]] =
+    new Eq[Tree[A]] {
+      override def eqv(x: Tree[A], y: Tree[A]): Boolean =
+        x === y
+    }
+
+  implicit def cheshireHashForTree[A]: Hash[Tree[A]] =
+    Hash.fromUniversalHashCode
 }
