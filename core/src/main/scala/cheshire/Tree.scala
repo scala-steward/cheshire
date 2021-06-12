@@ -231,7 +231,7 @@ object Tree {
   }
 
   final case class Leaf[+A](value: A) extends Tree[A] {
-    override def isLeaf = false
+    override def isLeaf = true
     override def leftOption = None
     override def rightOption = None
   }
