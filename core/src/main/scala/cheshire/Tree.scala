@@ -254,44 +254,6 @@ sealed abstract class Tree[+A] {
 
 object Tree {
 
-  def value[A]: Lens[Tree[A], A] = new Lens[Tree[A], A] {
-    override def get(s: Tree[A]): A = s.value
-    override def modifyF[F[_]: Functor](f: A => F[A])(s: Tree[A]): F[Tree[A]] = s match {
-      case Node(value, left, right) => f(value).map(Node(_, left, right))
-      case Leaf(value) => f(value).map(Leaf(_))
-    }
-  }
-
-  def left[A]: Optional[Tree[A], Tree[A]] = new Optional[Tree[A], Tree[A]] {
-    override def modifyA[F[_]: Applicative](f: Tree[A] => F[Tree[A]])(s: Tree[A]): F[Tree[A]] =
-      s match {
-        case Node(value, left, right) => f(left).map(Node(value, _, right))
-        case leaf => leaf.pure
-      }
-
-    override def getOrModify(s: Tree[A]): Either[Tree[A], Tree[A]] = s match {
-      case Node(_, left, _) => Right(left)
-      case leaf => Left(leaf)
-    }
-
-    override def getOption(s: Tree[A]): Option[Tree[A]] = s.leftOption
-  }
-
-  def right[A]: Optional[Tree[A], Tree[A]] = new Optional[Tree[A], Tree[A]] {
-    override def modifyA[F[_]: Applicative](f: Tree[A] => F[Tree[A]])(s: Tree[A]): F[Tree[A]] =
-      s match {
-        case Node(value, left, right) => f(right).map(Node(value, left, _))
-        case leaf => leaf.pure
-      }
-
-    override def getOrModify(s: Tree[A]): Either[Tree[A], Tree[A]] = s match {
-      case Node(_, left, _) => Right(left)
-      case leaf => Left(leaf)
-    }
-
-    override def getOption(s: Tree[A]): Option[Tree[A]] = s.rightOption
-  }
-
   type Oriented[+A] = Either[A, A]
 
   def unapply[A](tree: Tree[A]): Some[(A, Option[Tree[A]], Option[Tree[A]])] =
