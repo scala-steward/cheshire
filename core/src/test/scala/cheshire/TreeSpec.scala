@@ -31,6 +31,7 @@ import org.specs2.scalacheck.Parameters
 import org.typelevel.discipline.specs2.mutable.Discipline
 
 import Tree._
+import cats.laws.discipline.AlignTests
 
 class TreeSpec extends Specification with Discipline with ScalaCheck with ScalacheckShapeless {
 
@@ -60,6 +61,7 @@ class TreeSpec extends Specification with Discipline with ScalaCheck with Scalac
     "NonEmptyTraverse[Tree]",
     NonEmptyTraverseTests[Tree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
   checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[Tree].foldable[Int])
+  checkAll("Align[Tree]", AlignTests[Tree].align[Int, Int, Int, Int])
   checkAll("Parallel[Tree]", NonEmptyParallelTests[Tree].nonEmptyParallel[Int, Int])
   checkAll("Apply[ZipTree]", CommutativeApplyTests[ZipTree].commutativeApply[Int, Int, Int])
   checkAll("Eq[Tree]", EqTests[Tree[Int]].eqv)

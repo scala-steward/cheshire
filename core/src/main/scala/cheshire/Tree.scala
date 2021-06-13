@@ -33,6 +33,9 @@ import cats.syntax.all._
 import cats.~>
 
 import Tree._
+import cats.Align
+import cats.Functor
+import cats.data.Ior
 
 sealed abstract class Tree[+A] {
   def value: A
@@ -349,8 +352,11 @@ object Tree {
 
   }
 
-  implicit val cheshireInstancesForTree: Bimonad[Tree] with NonEmptyTraverse[Tree] =
-    new Bimonad[Tree] with NonEmptyTraverse[Tree] {
+  implicit val cheshireInstancesForTree
+      : Bimonad[Tree] with NonEmptyTraverse[Tree] with Align[Tree] =
+    new Bimonad[Tree] with NonEmptyTraverse[Tree] with Align[Tree] {
+
+      override def functor: Functor[Tree] = this
 
       override def pure[A](x: A): Tree[A] = Leaf(x)
 
@@ -424,6 +430,30 @@ object Tree {
       override def nonEmptyFlatTraverse[G[_]: Apply, A, B](fa: Tree[A])(f: A => G[Tree[B]])(
           implicit F: FlatMap[Tree]): G[Tree[B]] =
         fa.flatTraverse(f)
+
+      override def align[A, B](fa: Tree[A], fb: Tree[B]): Tree[Ior[A, B]] =
+        alignEval(fa, fb).value
+
+      private def alignEval[A, B](fa: Tree[A], fb: Tree[B]): Eval[Tree[Ior[A, B]]] =
+        (fa, fb) match {
+          case (Node(a, la, ra), Node(b, lb, rb)) =>
+            for {
+              left <- alignEval(la, lb)
+              right <- alignEval(ra, rb)
+            } yield Node(Ior.both(a, b), left, right)
+          case (Leaf(a), Leaf(b)) => Eval.now(Leaf(Ior.both(a, b)))
+          case (Node(a, la, ra), Leaf(b)) =>
+            for {
+              left <- la.traverse(a => Eval.now(Ior.left(a)))
+              right <- ra.traverse(a => Eval.now(Ior.left(a)))
+            } yield Node(Ior.both(a, b), left, right)
+          case (Leaf(a), Node(b, lb, rb)) =>
+            for {
+              left <- lb.traverse(b => Eval.now(Ior.right(b)))
+              right <- rb.traverse(b => Eval.now(Ior.right(b)))
+            } yield Node(Ior.both(a, b), left, right)
+        }
+
     }
 
   implicit def cheshireParallelForTreeZipTree: NonEmptyParallel.Aux[Tree, ZipTree] =
