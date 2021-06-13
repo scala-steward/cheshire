@@ -43,7 +43,7 @@ lazy val core = project
       "org.typelevel" %% "cats-laws" % CatsVersion % Test,
       "org.typelevel" %% "discipline-specs2" % DisciplineVersion % Test,
       "org.scalacheck" %% "scalacheck" % "1.15.4" % Test,
-      "com.github.alexarchambault" %% "scalacheck-shapeless_1.15" % "1.3.0" % Test,
+      "com.github.alexarchambault" %% "scalacheck-shapeless_1.15" % "1.3.0" % Test cross CrossVersion.for3Use2_13,
       "org.specs2" %% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
       "org.specs2" %% "specs2-scalacheck" % Specs2Version % Test cross CrossVersion.for3Use2_13
     )
