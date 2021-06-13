@@ -21,6 +21,7 @@ import cats.laws.discipline.BimonadTests
 import cats.laws.discipline.CommutativeApplyTests
 import cats.laws.discipline.NonEmptyParallelTests
 import cats.laws.discipline.NonEmptyTraverseTests
+import cats.laws.discipline.ShortCircuitingTests
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
 import org.scalacheck.ScalacheckShapeless
@@ -58,6 +59,7 @@ class TreeSpec extends Specification with Discipline with ScalaCheck with Scalac
   checkAll(
     "NonEmptyTraverse[Tree]",
     NonEmptyTraverseTests[Tree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
+  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[Tree].foldable[Int])
   checkAll("Parallel[Tree]", NonEmptyParallelTests[Tree].nonEmptyParallel[Int, Int])
   checkAll("Apply[ZipTree]", CommutativeApplyTests[ZipTree].commutativeApply[Int, Int, Int])
   checkAll("Eq[Tree]", EqTests[Tree[Int]].eqv)
