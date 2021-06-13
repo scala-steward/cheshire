@@ -26,7 +26,7 @@ replaceCommandAlias(
 addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/headerCreate")
 
 val CatsVersion = "2.6.1"
-val Specs2Version = "4.12.0"
+val Specs2Version = "4.12.1"
 val DisciplineVersion = "1.1.6"
 
 lazy val root =
