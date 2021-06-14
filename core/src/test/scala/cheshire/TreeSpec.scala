@@ -32,38 +32,42 @@ import org.typelevel.discipline.specs2.mutable.Discipline
 
 import Tree._
 import cats.laws.discipline.AlignTests
+import cats.laws.discipline.BitraverseTests
 
 class TreeSpec extends Specification with Discipline with ScalaCheck with ScalacheckShapeless {
 
   // Even increasing maxSize = 3 seems to cause issues :(
   implicit val parameters: Parameters = Parameters(maxSize = 2)
 
-  implicit private def genTree[A: Gen]: Gen[Tree[A]] = Gen.sized { size =>
+  implicit private def genTree[N: Gen, L: Gen]: Gen[Tree[N, L]] = Gen.sized { size =>
     if (size <= 1)
-      implicitly[Gen[A]].flatMap(Leaf(_))
+      implicitly[Gen[L]].flatMap(Leaf(_))
     else
       for {
-        value <- implicitly[Gen[A]]
+        value <- implicitly[Gen[N]]
         leftSize <- Gen.choose(0, size - 1)
-        left <- Gen.resize(leftSize, genTree)
+        left <- Gen.resize(leftSize, genTree[N, L])
         rightSize <- Gen.choose(0, size - 1)
-        right <- Gen.resize(rightSize, genTree)
+        right <- Gen.resize(rightSize, genTree[N, L])
       } yield Node(value, left, right)
   }
 
-  implicit private def arbitraryTree[A: Arbitrary]: Arbitrary[Tree[A]] =
-    Arbitrary(genTree(Arbitrary.arbitrary[A]))
+  implicit private def arbitraryTree[N: Arbitrary, L: Arbitrary]: Arbitrary[Tree[N, L]] =
+    Arbitrary(genTree(Arbitrary.arbitrary[N], Arbitrary.arbitrary[L]))
 
   // It is stack safe, but testing this is prohibitively explosive!
-  checkAll("Bimonad[Tree]", BimonadTests[Tree].stackUnsafeMonad[Int, Int, Int])
-  checkAll("Bimonad[Tree]", BimonadTests[Tree].comonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[UTree].stackUnsafeMonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[UTree].comonad[Int, Int, Int])
   checkAll(
     "NonEmptyTraverse[Tree]",
-    NonEmptyTraverseTests[Tree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
-  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[Tree].foldable[Int])
-  checkAll("Align[Tree]", AlignTests[Tree].align[Int, Int, Int, Int])
-  checkAll("Parallel[Tree]", NonEmptyParallelTests[Tree].nonEmptyParallel[Int, Int])
+    NonEmptyTraverseTests[UTree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
+  checkAll(
+    "Bitraverse[Tree]",
+    BitraverseTests[Tree].bitraverse[Option, Int, Int, Int, Int, Int, Int])
+  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[UTree].foldable[Int])
+  checkAll("Align[Tree]", AlignTests[UTree].align[Int, Int, Int, Int])
+  checkAll("Parallel[Tree]", NonEmptyParallelTests[UTree].nonEmptyParallel[Int, Int])
   checkAll("Apply[ZipTree]", CommutativeApplyTests[ZipTree].commutativeApply[Int, Int, Int])
-  checkAll("Eq[Tree]", EqTests[Tree[Int]].eqv)
+  checkAll("Eq[Tree]", EqTests[Tree[Int, Int]].eqv)
 
 }
