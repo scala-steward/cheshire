@@ -17,7 +17,9 @@
 package cheshire
 
 import cats.kernel.laws.discipline.EqTests
+import cats.laws.discipline.AlignTests
 import cats.laws.discipline.BimonadTests
+import cats.laws.discipline.BitraverseTests
 import cats.laws.discipline.CommutativeApplyTests
 import cats.laws.discipline.NonEmptyParallelTests
 import cats.laws.discipline.NonEmptyTraverseTests
@@ -31,8 +33,6 @@ import org.specs2.scalacheck.Parameters
 import org.typelevel.discipline.specs2.mutable.Discipline
 
 import Tree._
-import cats.laws.discipline.AlignTests
-import cats.laws.discipline.BitraverseTests
 
 class TreeSpec extends Specification with Discipline with ScalaCheck with ScalacheckShapeless {
 
