@@ -16,6 +16,7 @@
 
 package cheshire
 
+import cats.Align
 import cats.Applicative
 import cats.Apply
 import cats.Bimonad
@@ -23,19 +24,18 @@ import cats.CommutativeApply
 import cats.Eq
 import cats.Eval
 import cats.FlatMap
+import cats.Functor
 import cats.Monad
 import cats.Monoid
 import cats.NonEmptyParallel
 import cats.NonEmptyTraverse
 import cats.Show
+import cats.data.Ior
 import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.~>
 
 import Tree._
-import cats.Align
-import cats.Functor
-import cats.data.Ior
 
 sealed abstract class Tree[+A] {
   def value: A
