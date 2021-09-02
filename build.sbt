@@ -15,9 +15,8 @@ ThisBuild / scmInfo := Some(
     "git@github.com:armanbilge/van-cats.git"))
 sonatypeCredentialHost := "s01.oss.sonatype.org"
 
-val Scala213 = "2.13.6"
-val Scala3 = "3.0.0"
-ThisBuild / crossScalaVersions := Seq(Scala3, Scala213)
+val Scala3 = "3.0.2"
+ThisBuild / crossScalaVersions := Seq(Scala3)
 
 replaceCommandAlias(
   "ci",
@@ -26,25 +25,30 @@ replaceCommandAlias(
 addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/headerCreate")
 
 val CatsVersion = "2.6.1"
-val Specs2Version = "4.12.1"
-val DisciplineVersion = "1.1.6"
+val Specs2Version = "4.12.7"
+val DisciplineSpecs2Version = "1.1.6"
+
+val commonSettings = Seq(
+  scalacOptions := Seq("-new-syntax", "-indent", "-source:future"),
+  sonatypeCredentialHost := "s01.oss.sonatype.org"
+)
 
 lazy val root =
-  project.aggregate(core).enablePlugins(NoPublishPlugin)
+  project.in(file(".")).aggregate(core.js, core.jvm).enablePlugins(NoPublishPlugin)
 
-lazy val core = project
+lazy val core = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
   .in(file("core"))
   .settings(
     name := "cheshire",
-    sonatypeCredentialHost := "s01.oss.sonatype.org",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % CatsVersion,
-      "dev.optics" %% "monocle-core" % "3.0.0-RC2",
       "org.typelevel" %% "cats-laws" % CatsVersion % Test,
-      "org.typelevel" %% "discipline-specs2" % DisciplineVersion % Test,
-      "org.scalacheck" %% "scalacheck" % "1.15.4" % Test,
-      "com.github.alexarchambault" %% "scalacheck-shapeless_1.15" % "1.3.0" % Test cross CrossVersion.for3Use2_13,
+      "org.typelevel" %% "discipline-specs2" % DisciplineSpecs2Version % Test,
       "org.specs2" %% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
-      "org.specs2" %% "specs2-scalacheck" % Specs2Version % Test cross CrossVersion.for3Use2_13
+      ("org.specs2" %% "specs2-scalacheck" % Specs2Version % Test)
+        .cross(CrossVersion.for3Use2_13)
+        .exclude("org.scalacheck", "scalacheck_2.13")
     )
   )
+  .settings(commonSettings)
