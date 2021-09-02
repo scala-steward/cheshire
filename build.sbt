@@ -42,13 +42,14 @@ lazy val core = crossProject(JSPlatform, JVMPlatform)
   .settings(
     name := "cheshire",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % CatsVersion,
-      "org.typelevel" %% "cats-laws" % CatsVersion % Test,
-      "org.typelevel" %% "discipline-specs2" % DisciplineSpecs2Version % Test,
-      "org.specs2" %% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
-      ("org.specs2" %% "specs2-scalacheck" % Specs2Version % Test)
+      "org.typelevel" %%% "cats-core" % CatsVersion,
+      "org.typelevel" %%% "cats-laws" % CatsVersion % Test,
+      "org.typelevel" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
+      "org.specs2" %%% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
+      ("org.specs2" %%% "specs2-scalacheck" % Specs2Version % Test)
         .cross(CrossVersion.for3Use2_13)
         .exclude("org.scalacheck", "scalacheck_2.13")
+        .exclude("org.scalacheck", "scalacheck_sjs1_2.13")
     )
   )
   .settings(commonSettings)

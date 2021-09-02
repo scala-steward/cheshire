@@ -16,54 +16,98 @@
 
 package cheshire
 
+import cats.data.Ior
 import cats.kernel.laws.discipline.EqTests
 import cats.laws.discipline.AlignTests
 import cats.laws.discipline.BimonadTests
+import cats.laws.discipline.BitraverseTests
 import cats.laws.discipline.CommutativeApplyTests
 import cats.laws.discipline.NonEmptyParallelTests
 import cats.laws.discipline.NonEmptyTraverseTests
 import cats.laws.discipline.ShortCircuitingTests
 import org.scalacheck.Arbitrary
+import org.scalacheck.Cogen
 import org.scalacheck.Gen
-import org.scalacheck.ScalacheckShapeless
 import org.specs2.ScalaCheck
 import org.specs2.mutable.Specification
 import org.specs2.scalacheck.Parameters
 import org.typelevel.discipline.specs2.mutable.Discipline
 
-import Tree._
+import Tree.*
 
-class TreeSpec extends Specification with Discipline with ScalaCheck with ScalacheckShapeless {
+@org.portablescala.reflect.annotation.EnableReflectiveInstantiation
+class TreeSpec extends Specification, Discipline, ScalaCheck:
 
   // Even increasing maxSize = 3 seems to cause issues :(
-  implicit val parameters: Parameters = Parameters(maxSize = 2)
+  given Parameters = Parameters(maxSize = 2)
 
-  implicit private def genTree[A: Gen]: Gen[Tree[A]] = Gen.sized { size =>
-    if (size <= 1)
-      implicitly[Gen[A]].flatMap(Leaf(_))
+  given genTree[N: Gen, L: Gen]: Gen[Tree[N, L]] = Gen.sized { size =>
+    if size <= 1 then summon[Gen[L]].flatMap(Leaf(_))
     else
-      for {
-        value <- implicitly[Gen[A]]
+      for
+        value <- summon[Gen[N]]
         leftSize <- Gen.choose(0, size - 1)
-        left <- Gen.resize(leftSize, genTree)
+        left <- Gen.resize(leftSize, genTree[N, L])
         rightSize <- Gen.choose(0, size - 1)
-        right <- Gen.resize(rightSize, genTree)
-      } yield Node(value, left, right)
+        right <- Gen.resize(rightSize, genTree[N, L])
+      yield Node(value, left, right)
   }
 
-  implicit private def arbitraryTree[A: Arbitrary]: Arbitrary[Tree[A]] =
-    Arbitrary(genTree(Arbitrary.arbitrary[A]))
+  given cogenTree[N: Cogen, L: Cogen]: Cogen[Tree[N, L]] =
+    Cogen { (seed, tree) =>
+      tree match
+        case Leaf(l) => Cogen[L].perturb(seed, l)
+        case Node(n, left, right) =>
+          Cogen[N].perturb(
+            cogenTree.perturb(
+              cogenTree.perturb(
+                seed,
+                right
+              ),
+              left
+            ),
+            n
+          )
+
+    }
+
+  given [N: Arbitrary, L: Arbitrary]: Arbitrary[Tree[N, L]] =
+    Arbitrary(genTree(using Arbitrary.arbitrary[N], Arbitrary.arbitrary[L]))
+
+  given [A](using arb: Arbitrary[UTree[A]]): Arbitrary[ZipTree[A]] =
+    Arbitrary(arb.arbitrary.map(ZipTree(_)))
+
+  given [A, B](using arb: Arbitrary[Either[(A, B), Either[A, B]]]): Arbitrary[Ior[A, B]] =
+    Arbitrary(
+      arb.arbitrary.map {
+        case Left((a, b)) => Ior.both(a, b)
+        case Right(ab) => Ior.fromEither(ab)
+      }
+    )
+
+  given [A, B, C](
+      using arb: Arbitrary[Either[(A, B), Either[A, B]] => C]): Arbitrary[Ior[A, B] => C] =
+    Arbitrary(
+      arb.arbitrary.map { f =>
+        (_: Ior[A, B]) match {
+          case Ior.Both(a, b) => f(Left((a, b)))
+          case Ior.Left(a) => f(Right(Left(a)))
+          case Ior.Right(b) => f(Right(Right(b)))
+        }
+      }
+    )
 
   // It is stack safe, but testing this is prohibitively explosive!
-  checkAll("Bimonad[Tree]", BimonadTests[Tree].stackUnsafeMonad[Int, Int, Int])
-  checkAll("Bimonad[Tree]", BimonadTests[Tree].comonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[UTree].stackUnsafeMonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[UTree].comonad[Int, Int, Int])
   checkAll(
     "NonEmptyTraverse[Tree]",
-    NonEmptyTraverseTests[Tree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
-  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[Tree].foldable[Int])
-  checkAll("Align[Tree]", AlignTests[Tree].align[Int, Int, Int, Int])
-  checkAll("Parallel[Tree]", NonEmptyParallelTests[Tree].nonEmptyParallel[Int, Int])
+    NonEmptyTraverseTests[UTree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
+  checkAll(
+    "Bitraverse[Tree]",
+    BitraverseTests[Tree].bitraverse[Option, Int, Int, Int, Int, Int, Int])
+  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[UTree].foldable[Int])
+  checkAll("Align[Tree]", AlignTests[UTree].align[Int, Int, Int, Int])
+  checkAll("Parallel[Tree]", NonEmptyParallelTests[UTree].nonEmptyParallel[Int, Int])
   checkAll("Apply[ZipTree]", CommutativeApplyTests[ZipTree].commutativeApply[Int, Int, Int])
-  checkAll("Eq[Tree]", EqTests[Tree[Int]].eqv)
-
-}
+  checkAll("Eq[Tree]", EqTests[Tree[Int, Int]].eqv)
