@@ -29,7 +29,7 @@ val Specs2Version = "4.12.7"
 val DisciplineSpecs2Version = "1.1.6"
 
 val commonSettings = Seq(
-  scalacOptions := Seq("-new-syntax", "-indent", "-source:future"),
+  scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future"),
   sonatypeCredentialHost := "s01.oss.sonatype.org"
 )
 
