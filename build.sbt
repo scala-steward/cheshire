@@ -26,7 +26,7 @@ addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/he
 
 val CatsVersion = "2.6.1"
 val Specs2Version = "4.12.10"
-val DisciplineSpecs2Version = "1.1.6"
+val DisciplineSpecs2Version = "1.2.0"
 
 val commonSettings = Seq(
   scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future"),
