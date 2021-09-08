@@ -25,8 +25,8 @@ replaceCommandAlias(
 addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/headerCreate")
 
 val CatsVersion = "2.6.1"
-val Specs2Version = "4.12.10"
-val DisciplineSpecs2Version = "1.2.0"
+val Specs2Version = "5.0.0-RC-07"
+val DisciplineSpecs2Version = "1.2-7-e3ce260"
 
 val commonSettings = Seq(
   scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future"),
@@ -44,12 +44,9 @@ lazy val core = crossProject(JSPlatform, JVMPlatform)
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % CatsVersion,
       "org.typelevel" %%% "cats-laws" % CatsVersion % Test,
-      "org.typelevel" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
-      "org.specs2" %%% "specs2-core" % Specs2Version % Test cross CrossVersion.for3Use2_13,
-      ("org.specs2" %%% "specs2-scalacheck" % Specs2Version % Test)
-        .cross(CrossVersion.for3Use2_13)
-        .exclude("org.scalacheck", "scalacheck_2.13")
-        .exclude("org.scalacheck", "scalacheck_sjs1_2.13")
+      "io.vasilev" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
+      "org.specs2" %%% "specs2-core" % Specs2Version % Test,
+      "org.specs2" %%% "specs2-scalacheck" % Specs2Version % Test
     )
   )
   .settings(commonSettings)
