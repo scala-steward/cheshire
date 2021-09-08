@@ -5,15 +5,12 @@ ThisBuild / publishGithubUser := "armanbilge"
 ThisBuild / publishFullName := "Arman Bilge"
 ThisBuild / startYear := Some(2021)
 
-mimaPreviousArtifacts := Set()
-
 enablePlugins(SonatypeCiReleasePlugin)
-ThisBuild / homepage := Some(url("https://github.com/armanbilge/van-cats"))
+ThisBuild / homepage := Some(url("https://github.com/armanbilge/cheshire"))
 ThisBuild / scmInfo := Some(
   ScmInfo(
-    url("https://github.com/armanbilge/van-cats"),
-    "git@github.com:armanbilge/van-cats.git"))
-sonatypeCredentialHost := "s01.oss.sonatype.org"
+    url("https://github.com/armanbilge/cheshire"),
+    "git@github.com:armanbilge/cheshire.git"))
 
 val Scala3 = "3.0.2"
 ThisBuild / crossScalaVersions := Seq(Scala3)
