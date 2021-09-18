@@ -16,10 +16,10 @@
 
 package cheshire.likelihood
 
-trait Partition[F[_], G[_], L, R]:
+trait Partition[F[_], G[_], R]:
   
   trait Model:
-    def rates: F[IndexedSeq[R]]
+    def rates: G[IndexedSeq[R]]
   
   trait Matrix
   
@@ -49,11 +49,11 @@ trait Partition[F[_], G[_], L, R]:
 
   def seed(model: Model, x: Ppv): G[Unit]
 
-  def integrateProduct(x: Ppv, y: Clv): G[L]
+  def integrateProduct(x: Ppv, y: Clv): G[R]
 
-  def seedAndIntegrate(model: Model, x: Clv): G[L]
+  def seedAndIntegrate(model: Model, x: Clv): G[R]
 
-  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[G, L, R]]
+  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[R]]
 
   def nodeLikelihood(
       model: Model,
@@ -62,4 +62,4 @@ trait Partition[F[_], G[_], L, R]:
       leftCLV: Clv,
       leftHeight: R,
       rightCLV: Clv,
-      rightHeight: R)(t: R): F[LikelihoodEvaluation[G, L, R]]
+      rightHeight: R)(t: R): F[LikelihoodEvaluation[R]]

@@ -19,15 +19,15 @@ package cheshire.likelihood
 import cats.Applicative
 import cats.syntax.all.*
 
-trait LikelihoodEvaluation[F[_], L, R]:
-  def likelihood: F[L]
-  def derivative: F[R]
-  def secondDerivative: F[R]
+trait LikelihoodEvaluation[R]:
+  def logLikelihood: R
+  def derivative: R
+  def secondDerivative: R
 
 object LikelihoodEvaluation:
-  def apply[F[_]: Applicative, L, R](l: L, d: R, dd: R): LikelihoodEvaluation[F, L, R] =
+  def apply[R](ll: R, d: R, dd: R): LikelihoodEvaluation[R] =
     new {
-      val likelihood = l.pure[F]
-      val derivative = d.pure[F]
-      val secondDerivative = d.pure[F]
+      val logLikelihood = ll
+      val derivative = d
+      val secondDerivative = dd
     }

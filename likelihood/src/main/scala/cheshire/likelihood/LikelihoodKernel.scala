@@ -18,11 +18,11 @@ package cheshire.likelihood
 
 import scodec.bits.BitVector
 
-trait LikelihoodKernel[F[_], G[_], L, R, -N]:
+trait LikelihoodKernel[F[_], G[_], R, -N]:
 
   def mkPartition(
       stateCount: N,
       categoryCount: Int,
       sequences: IndexedSeq[BitVector],
       siteWeights: IndexedSeq[Int]
-  ): F[Partition[F, G, L, R]]
+  ): F[Partition[F, G, R]]
