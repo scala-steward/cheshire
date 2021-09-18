@@ -17,12 +17,12 @@
 package cheshire.likelihood
 
 trait Partition[F[_], G[_], R]:
-  
+
   trait Model:
     def rates: G[IndexedSeq[R]]
-  
+
   trait Matrix
-  
+
   sealed trait Partial
   trait Ppv extends Partial
   trait Clv extends Partial
@@ -46,6 +46,10 @@ trait Partition[F[_], G[_], R]:
   def backcast(y: Clv, P: Matrix, x: Clv): G[Unit]
 
   def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: Clv): G[Unit]
+
+  def product(x: Ppv, y: Clv, z: Ppv): G[Unit]
+
+  def product(x: Clv, y: Clv, z: Clv): G[Unit]
 
   def seed(model: Model, x: Ppv): G[Unit]
 
