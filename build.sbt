@@ -23,7 +23,7 @@ addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/he
 
 val AlgebraVersion = "2.2.3"
 val CatsVersion = "2.6.1"
-val CatsEffectVersion = "3.2.8"
+val CatsEffectVersion = "3.2.9"
 val DisciplineVersion = "1.1.5"
 val ScodecBitsVersion = "1.1.28"
 val Specs2Version = "5.0.0-RC-11"
