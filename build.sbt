@@ -35,7 +35,10 @@ val commonSettings = Seq(
 )
 
 lazy val root =
-  project.in(file(".")).aggregate(core.js, core.jvm, likelihood, likelihoodLaws).enablePlugins(NoPublishPlugin)
+  project
+    .in(file("."))
+    .aggregate(core.js, core.jvm, likelihood, likelihoodLaws)
+    .enablePlugins(NoPublishPlugin)
 
 lazy val core = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
