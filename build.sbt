@@ -21,7 +21,11 @@ replaceCommandAlias(
 )
 addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/headerCreate")
 
+val AlgebraVersion = "2.2.3"
 val CatsVersion = "2.6.1"
+val CatsEffectVersion = "3.2.8"
+val DisciplineVersion = "1.1.5"
+val ScodecBitsVersion = "1.1.28"
 val Specs2Version = "5.0.0-RC-11"
 val DisciplineSpecs2Version = "1.2-7-e3ce260"
 
@@ -31,7 +35,7 @@ val commonSettings = Seq(
 )
 
 lazy val root =
-  project.in(file(".")).aggregate(core.js, core.jvm).enablePlugins(NoPublishPlugin)
+  project.in(file(".")).aggregate(core.js, core.jvm, likelihood, likelihoodLaws).enablePlugins(NoPublishPlugin)
 
 lazy val core = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
@@ -47,3 +51,29 @@ lazy val core = crossProject(JSPlatform, JVMPlatform)
     )
   )
   .settings(commonSettings)
+
+lazy val likelihood = project
+  .in(file("likelihood"))
+  .settings(
+    name := "cheshire-likelihood",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "cats-core" % CatsVersion,
+      "org.scodec" %%% "scodec-bits" % ScodecBitsVersion,
+      "org.typelevel" %%% "cats-effect-kernel" % CatsEffectVersion
+    )
+  )
+  .settings(commonSettings)
+
+lazy val likelihoodLaws = project
+  .in(file("likelihood-laws"))
+  .settings(
+    name := "cheshire-likelihood-laws",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %%% "algebra" % AlgebraVersion,
+      "org.typelevel" %%% "cats-kernel-laws" % CatsVersion,
+      "org.typelevel" %%% "discipline-core" % DisciplineVersion,
+      "org.typelevel" %%% "cats-effect" % CatsEffectVersion % Test
+    )
+  )
+  .settings(commonSettings)
+  .dependsOn(likelihood)
