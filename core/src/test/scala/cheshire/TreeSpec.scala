@@ -33,34 +33,33 @@ import org.specs2.mutable.Specification
 import org.specs2.scalacheck.Parameters
 import org.typelevel.discipline.specs2.mutable.Discipline
 
-import Tree.*
+import GenTree.*
 
-@org.portablescala.reflect.annotation.EnableReflectiveInstantiation
-class TreeSpec extends Specification, Discipline, ScalaCheck:
+class GenTreeSpec extends Specification, Discipline, ScalaCheck:
 
   // Even increasing maxSize = 3 seems to cause issues :(
   given Parameters = Parameters(maxSize = 2)
 
-  given genTree[N: Gen, L: Gen]: Gen[Tree[N, L]] = Gen.sized { size =>
+  given [N: Gen, L: Gen]: Gen[GenTree[N, L]] = Gen.sized { size =>
     if size <= 1 then summon[Gen[L]].flatMap(Leaf(_))
     else
       for
         value <- summon[Gen[N]]
         leftSize <- Gen.choose(0, size - 1)
-        left <- Gen.resize(leftSize, genTree[N, L])
+        left <- Gen.resize(leftSize, given_Gen_GenTree[N, L])
         rightSize <- Gen.choose(0, size - 1)
-        right <- Gen.resize(rightSize, genTree[N, L])
+        right <- Gen.resize(rightSize, given_Gen_GenTree[N, L])
       yield Node(value, left, right)
   }
 
-  given cogenTree[N: Cogen, L: Cogen]: Cogen[Tree[N, L]] =
+  given [N: Cogen, L: Cogen]: Cogen[GenTree[N, L]] =
     Cogen { (seed, tree) =>
       tree match
         case Leaf(l) => Cogen[L].perturb(seed, l)
         case Node(n, left, right) =>
           Cogen[N].perturb(
-            cogenTree.perturb(
-              cogenTree.perturb(
+            given_Cogen_GenTree.perturb(
+              given_Cogen_GenTree.perturb(
                 seed,
                 right
               ),
@@ -71,10 +70,10 @@ class TreeSpec extends Specification, Discipline, ScalaCheck:
 
     }
 
-  given [N: Arbitrary, L: Arbitrary]: Arbitrary[Tree[N, L]] =
-    Arbitrary(genTree(using Arbitrary.arbitrary[N], Arbitrary.arbitrary[L]))
+  given [N: Arbitrary, L: Arbitrary]: Arbitrary[GenTree[N, L]] =
+    Arbitrary(given_Gen_GenTree(using Arbitrary.arbitrary[N], Arbitrary.arbitrary[L]))
 
-  given [A](using arb: Arbitrary[UTree[A]]): Arbitrary[ZipTree[A]] =
+  given [A](using arb: Arbitrary[Tree[A]]): Arbitrary[ZipTree[A]] =
     Arbitrary(arb.arbitrary.map(ZipTree(_)))
 
   given [A, B](using arb: Arbitrary[Either[(A, B), Either[A, B]]]): Arbitrary[Ior[A, B]] =
@@ -98,16 +97,16 @@ class TreeSpec extends Specification, Discipline, ScalaCheck:
     )
 
   // It is stack safe, but testing this is prohibitively explosive!
-  checkAll("Bimonad[Tree]", BimonadTests[UTree].stackUnsafeMonad[Int, Int, Int])
-  checkAll("Bimonad[Tree]", BimonadTests[UTree].comonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[Tree].stackUnsafeMonad[Int, Int, Int])
+  checkAll("Bimonad[Tree]", BimonadTests[Tree].comonad[Int, Int, Int])
   checkAll(
     "NonEmptyTraverse[Tree]",
-    NonEmptyTraverseTests[UTree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
+    NonEmptyTraverseTests[Tree].nonEmptyTraverse[Option, Int, Int, Int, Int, Option, Option])
   checkAll(
-    "Bitraverse[Tree]",
-    BitraverseTests[Tree].bitraverse[Option, Int, Int, Int, Int, Int, Int])
-  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[UTree].foldable[Int])
-  checkAll("Align[Tree]", AlignTests[UTree].align[Int, Int, Int, Int])
-  checkAll("Parallel[Tree]", NonEmptyParallelTests[UTree].nonEmptyParallel[Int, Int])
+    "Bitraverse[GenTree]",
+    BitraverseTests[GenTree].bitraverse[Option, Int, Int, Int, Int, Int, Int])
+  checkAll("NonEmptyTraverse[Tree]", ShortCircuitingTests[Tree].foldable[Int])
+  checkAll("Align[Tree]", AlignTests[Tree].align[Int, Int, Int, Int])
+  checkAll("Parallel[Tree]", NonEmptyParallelTests[Tree].nonEmptyParallel[Int, Int])
   checkAll("Apply[ZipTree]", CommutativeApplyTests[ZipTree].commutativeApply[Int, Int, Int])
-  checkAll("Eq[Tree]", EqTests[Tree[Int, Int]].eqv)
+  checkAll("Eq[GenTree]", EqTests[GenTree[Int, Int]].eqv)

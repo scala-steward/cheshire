@@ -33,16 +33,16 @@ import cats.NonEmptyTraverse
 import cats.Show
 import cats.data.Ior
 import cats.data.NonEmptyList
-import cats.syntax.all.given
+import cats.syntax.all.*
 import cats.~>
 
-import Tree.*
+import GenTree.*
 
-sealed abstract class Tree[+N, +L]:
+sealed abstract class GenTree[+N, +L]:
   def valueEither: Either[N, L]
   def isLeaf: Boolean
-  def leftOption: Option[Tree[N, L]]
-  def rightOption: Option[Tree[N, L]]
+  def leftOption: Option[GenTree[N, L]]
+  def rightOption: Option[GenTree[N, L]]
 
   final def button: Button[N, L] = Button(this, Nil)
 
@@ -58,25 +58,25 @@ sealed abstract class Tree[+N, +L]:
   final def leafCount: Int = (size + 1) / 2
   final def nodeCount: Int = leafCount - 1
 
-  final def isLeft[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Boolean =
+  final def isLeft[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
     leftOption.exists(_ === that)
 
-  final def isLeftOf[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Boolean =
+  final def isLeftOf[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
     that.isLeft(this)
 
-  final def isRight[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Boolean =
+  final def isRight[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
     rightOption.exists(_ === that)
 
-  final def isRightOf[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Boolean =
+  final def isRightOf[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
     that.isRight(this)
 
-  final def sibling[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Option[Tree[N1, L1]] =
+  final def sibling[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Option[GenTree[N1, L1]] =
     if isRight(that) then leftOption else if isLeft(that) then rightOption else None
 
-  final def bimap[N1, L1](f: N => N1, g: L => L1): Tree[N1, L1] =
+  final def bimap[N1, L1](f: N => N1, g: L => L1): GenTree[N1, L1] =
     bitraverse(n => Eval.now(f(n)), l => Eval.now(g(l))).value
 
-  final def bitraverse[F[_]: Apply, N1, L1](f: N => F[N1], g: L => F[L1]): F[Tree[N1, L1]] =
+  final def bitraverse[F[_]: Apply, N1, L1](f: N => F[N1], g: L => F[L1]): F[GenTree[N1, L1]] =
     this match
       case Node(value, left, right) =>
         (f(value), left.bitraverse(f, g), right.bitraverse(f, g)).mapN(Node(_, _, _))
@@ -95,10 +95,11 @@ sealed abstract class Tree[+N, +L]:
         } yield b
       case Leaf(value) => f(value)
 
-  final def scanPostOrder[Z](f: L => Z)(g: (Z, Z, N) => Z): Tree[Z, Z] =
+  final def scanPostOrder[Z](f: L => Z)(g: (Z, Z, N) => Z): GenTree[Z, Z] =
     scanPostOrderM(a => Eval.now(f(a)))((l, r, a) => Eval.now(g(l, r, a))).value
 
-  final def scanPostOrderM[F[_]: Monad, Z](f: L => F[Z])(g: (Z, Z, N) => F[Z]): F[Tree[Z, Z]] =
+  final def scanPostOrderM[F[_]: Monad, Z](f: L => F[Z])(
+      g: (Z, Z, N) => F[Z]): F[GenTree[Z, Z]] =
     this match
       case Node(value, left, right) =>
         for
@@ -108,8 +109,8 @@ sealed abstract class Tree[+N, +L]:
         yield Node(b, l, r)
       case Leaf(value) => f(value).map(Leaf(_))
 
-  final def ===[N1 >: N: Eq, L1 >: L: Eq](that: Tree[N1, L1]): Boolean =
-    def recurse(x: Tree[N1, L1], y: Tree[N1, L1]): Eval[Boolean] = (x, y) match
+  final def ===[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
+    def recurse(x: GenTree[N1, L1], y: GenTree[N1, L1]): Eval[Boolean] = (x, y) match
       case (Node(xn, xl, xr), Node(yn, yl, yr)) if xn === yn =>
         recurse(xl, yl).flatMap {
           if _ then recurse(xr, yr)
@@ -124,33 +125,33 @@ sealed abstract class Tree[+N, +L]:
       s"Node(${(n: N1).show}, $l, $r)"
     }
 
-object Tree extends TreeInstances:
+object GenTree extends GenTreeInstances:
   type Oriented[+A] = Either[A, A]
 
   def unapply[N, L](
-      tree: Tree[N, L]): Some[(Either[N, L], Option[Tree[N, L]], Option[Tree[N, L]])] =
+      tree: GenTree[N, L]): Some[(Either[N, L], Option[GenTree[N, L]], Option[GenTree[N, L]])] =
     Some((tree.valueEither, tree.leftOption, tree.rightOption))
 
-  def apply[L](value: L): Tree[Nothing, L] = Leaf(value)
-  def apply[N, L](value: N, left: Tree[N, L], right: Tree[N, L]): Tree[N, L] =
+  def apply[L](value: L): GenTree[Nothing, L] = Leaf(value)
+  def apply[N, L](value: N, left: GenTree[N, L], right: GenTree[N, L]): GenTree[N, L] =
     Node(value, left, right)
 
-  final case class Node[+N, +L](value: N, left: Tree[N, L], right: Tree[N, L])
-      extends Tree[N, L]:
+  final case class Node[+N, +L](value: N, left: GenTree[N, L], right: GenTree[N, L])
+      extends GenTree[N, L]:
     override def valueEither = Left(value)
     override def isLeaf = false
     override def leftOption = Some(left)
     override def rightOption = Some(right)
 
-  final case class Leaf[+L](value: L) extends Tree[Nothing, L]:
+  final case class Leaf[+L](value: L) extends GenTree[Nothing, L]:
     override def valueEither = Right(value)
     override def isLeaf = true
     override def leftOption = None
     override def rightOption = None
 
-  final case class Button[+N, +L](at: Tree[N, L], ancestry: List[Node[N, L]]):
+  final case class Button[+N, +L](at: GenTree[N, L], ancestry: List[Node[N, L]]):
 
-    def tree: Tree[N, L] = ancestry.lastOption.getOrElse(at)
+    def tree: GenTree[N, L] = ancestry.lastOption.getOrElse(at)
 
     def up: Option[Button[N, L]] = ancestry match
       case at :: ancestry => Some(Button(at, ancestry))
@@ -182,7 +183,7 @@ object Tree extends TreeInstances:
       if isLeft then sibling.flatMap(Monad[Option].iterateUntilM(_)(_.left)(_.at.isLeaf))
       else up
 
-    def replace[N1 >: N, L1 >: L](tree: Tree[N1, L1]): Button[N1, L1] = Button(
+    def replace[N1 >: N, L1 >: L](tree: GenTree[N1, L1]): Button[N1, L1] = Button(
       tree,
       NonEmptyList.fromList(ancestry).fold(List.empty[Node[N1, L1]]) {
         case NonEmptyList(oldParent, ancestry) =>
@@ -206,22 +207,22 @@ object Tree extends TreeInstances:
       }
     )
 
-type UTree[A] = Tree[A, A]
-extension [A](tree: UTree[A])
+type Tree[A] = GenTree[A, A]
+extension [A](tree: Tree[A])
   def value: A = tree match
     case Node(value, _, _) => value
     case Leaf(value) => value
 
-  def map[B](f: A => B): UTree[B] =
+  def map[B](f: A => B): Tree[B] =
     tree.bimap(f, f)
 
-  def traverse[F[_]: Apply, B](f: A => F[B]): F[UTree[B]] =
+  def traverse[F[_]: Apply, B](f: A => F[B]): F[Tree[B]] =
     tree.bitraverse(f, f)
 
-  def mapWithParent[B](f: A => B)(g: (A, A) => B): UTree[B] =
+  def mapWithParent[B](f: A => B)(g: (A, A) => B): Tree[B] =
     traverseWithParent(a => Eval.now(f(a)))((p, c) => Eval.now(g(p, c))).value
 
-  def traverseWithParent[F[_]: Applicative, B](f: A => F[B])(g: (A, A) => F[B]): F[UTree[B]] =
+  def traverseWithParent[F[_]: Applicative, B](f: A => F[B])(g: (A, A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
         (
@@ -230,11 +231,11 @@ extension [A](tree: UTree[A])
           right.traverseWithParent(g(value, _))(g)).mapN(Node(_, _, _))
       case Leaf(value) => f(value).map(Leaf(_))
 
-  def mapWithOrientedParent[B](f: A => B)(g: (Oriented[A], A) => B): UTree[B] =
+  def mapWithOrientedParent[B](f: A => B)(g: (Oriented[A], A) => B): Tree[B] =
     traverseWithOrientedParent(a => Eval.now(f(a)))((p, c) => Eval.now(g(p, c))).value
 
   def traverseWithOrientedParent[F[_]: Apply, B](f: A => F[B])(
-      g: (Oriented[A], A) => F[B]): F[UTree[B]] = tree match
+      g: (Oriented[A], A) => F[B]): F[Tree[B]] = tree match
     case Node(value, left, right) =>
       (
         f(value),
@@ -242,10 +243,10 @@ extension [A](tree: UTree[A])
         right.traverseWithOrientedParent(g(Right(value), _))(g)).mapN(Node(_, _, _))
     case Leaf(value) => f(value).map(Leaf(_))
 
-  def mapWithChildren[B](f: A => B)(g: (A, A, A) => B): UTree[B] =
+  def mapWithChildren[B](f: A => B)(g: (A, A, A) => B): Tree[B] =
     traverseWithChildren(a => Eval.now(f(a)))((a, l, r) => Eval.now(g(a, l, r))).value
 
-  def traverseWithChildren[F[_]: Apply, B](f: A => F[B])(g: (A, A, A) => F[B]): F[UTree[B]] =
+  def traverseWithChildren[F[_]: Apply, B](f: A => F[B])(g: (A, A, A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
         (
@@ -254,13 +255,13 @@ extension [A](tree: UTree[A])
           right.traverseWithChildren(f)(g)).mapN(Node(_, _, _))
       case Leaf(value) => f(value).map(Leaf(_))
 
-  def flatMap[B](f: A => UTree[B]): UTree[B] =
+  def flatMap[B](f: A => Tree[B]): Tree[B] =
     flatTraverse(a => Eval.now(f(a))).value
 
-  def flatTraverse[F[_]: Apply, B](f: A => F[UTree[B]]): F[UTree[B]] = tree match
+  def flatTraverse[F[_]: Apply, B](f: A => F[Tree[B]]): F[Tree[B]] = tree match
     case Node(value, left, right) =>
       (f(value), left.flatTraverse(f), right.flatTraverse(f)).mapN { (fb, flb, frb) =>
-        def recurse(fb: Tree[B, B]): Eval[UTree[B]] = fb match
+        def recurse(fb: Tree[B]): Eval[Tree[B]] = fb match
           case Node(value, left, right) =>
             for
               l <- recurse(left)
@@ -271,19 +272,19 @@ extension [A](tree: UTree[A])
       }
     case Leaf(value) => f(value)
 
-  def coflatMap[B](f: UTree[A] => B): UTree[B] =
+  def coflatMap[B](f: Tree[A] => B): Tree[B] =
     coflatTraverse(fa => Eval.now(f(fa))).value
 
-  def coflatTraverse[F[_]: Apply, B](f: UTree[A] => F[B]): F[UTree[B]] = tree match
+  def coflatTraverse[F[_]: Apply, B](f: Tree[A] => F[B]): F[Tree[B]] = tree match
     case node @ Node(_, left, right) =>
       (f(node), left.coflatTraverse(f), right.coflatTraverse(f)).mapN(Node(_, _, _))
     case leaf => f(leaf).map(Leaf(_))
 
-  def mapWithButton[B](f: Button[A, A] => B): UTree[B] =
+  def mapWithButton[B](f: Button[A, A] => B): Tree[B] =
     traverseWithButton(c => Eval.now(f(c))).value
 
-  def traverseWithButton[F[_]: Monad, B](f: Button[A, A] => F[B]): F[UTree[B]] =
-    def recurse(button: Button[A, A]): F[UTree[B]] =
+  def traverseWithButton[F[_]: Monad, B](f: Button[A, A] => F[B]): F[Tree[B]] =
+    def recurse(button: Button[A, A]): F[Tree[B]] =
       (button.left, button.right) match
         case (Some(left), Some(right)) =>
           for
@@ -294,10 +295,10 @@ extension [A](tree: UTree[A])
         case _ => f(button).map(Leaf(_))
     recurse(tree.button)
 
-  def scanPreOrder[B](f: A => B)(g: (B, A) => B): UTree[B] =
+  def scanPreOrder[B](f: A => B)(g: (B, A) => B): Tree[B] =
     scanPreOrderM(a => Eval.now(f(a)))((b, a) => Eval.now(g(b, a))).value
 
-  def scanPreOrderM[F[_]: Monad, B](f: A => F[B])(g: (B, A) => F[B]): F[UTree[B]] =
+  def scanPreOrderM[F[_]: Monad, B](f: A => F[B])(g: (B, A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
         for
@@ -307,11 +308,11 @@ extension [A](tree: UTree[A])
         yield Node(b, l, r)
       case Leaf(value) => f(value).map(Leaf(_))
 
-  def scanPreOrderOriented[B](f: A => B)(g: (Oriented[B], A) => B): UTree[B] =
+  def scanPreOrderOriented[B](f: A => B)(g: (Oriented[B], A) => B): Tree[B] =
     scanPreOrderOrientedM(a => Eval.now(f(a)))((b, a) => Eval.now(g(b, a))).value
 
   def scanPreOrderOrientedM[F[_]: Monad, B](f: A => F[B])(
-      g: (Oriented[B], A) => F[B]): F[UTree[B]] =
+      g: (Oriented[B], A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
         for
@@ -321,14 +322,14 @@ extension [A](tree: UTree[A])
         yield Node(b, l, r)
       case Leaf(value) => f(value).map(Leaf(_))
 
-  def zip[B](that: UTree[B]): UTree[(A, B)] =
+  def zip[B](that: Tree[B]): Tree[(A, B)] =
     zipWithM(that)((a, b) => Eval.now((a, b))).value
 
-  def zipWith[B, Z](that: UTree[B])(f: (A, B) => Z): UTree[Z] =
+  def zipWith[B, Z](that: Tree[B])(f: (A, B) => Z): Tree[Z] =
     zipWithM(that)((a, b) => Eval.now(f(a, b))).value
 
-  def zipWithM[F[_]: Monad, B, Z](that: UTree[B])(f: (A, B) => F[Z]): F[UTree[Z]] =
-    (tree, that: Tree[B, B]) match
+  def zipWithM[F[_]: Monad, B, Z](that: Tree[B])(f: (A, B) => F[Z]): F[Tree[Z]] =
+    (tree, that: Tree[B]) match
       case (Node(a, thisLeft, thisRight), Node(b, thatLeft, thatRight)) =>
         for
           l <- thisLeft.zipWithM(thatLeft)(f)
@@ -337,19 +338,21 @@ extension [A](tree: UTree[A])
         yield Node(z, l, r)
       case _ => f(tree.value, that.value).map(Leaf(_))
 
-sealed abstract private[cheshire] class TreeInstances:
+sealed abstract private[cheshire] class GenTreeInstances:
 
-  given cheshireInstancesForTree: Bitraverse[Tree] with
+  given Bitraverse[GenTree] with
 
-    override def bimap[A, B, C, D](fab: Tree[A, B])(f: A => C, g: B => D): Tree[C, D] =
+    override def bimap[A, B, C, D](fab: GenTree[A, B])(f: A => C, g: B => D): GenTree[C, D] =
       fab.bimap(f, g)
 
     override def bitraverse[G[_]: Applicative, A, B, C, D](
-        fab: Tree[A, B])(f: A => G[C], g: B => G[D]): G[Tree[C, D]] =
+        fab: GenTree[A, B])(f: A => G[C], g: B => G[D]): G[GenTree[C, D]] =
       fab.bitraverse(f, g)
 
-    override def bifoldLeft[A, B, C](fab: Tree[A, B], c: C)(f: (C, A) => C, g: (C, B) => C): C =
-      def recurse(fab: Tree[A, B], c: C): Eval[C] = fab match
+    override def bifoldLeft[A, B, C](fab: GenTree[A, B], c: C)(
+        f: (C, A) => C,
+        g: (C, B) => C): C =
+      def recurse(fab: GenTree[A, B], c: C): Eval[C] = fab match
         case Node(value, left, right) =>
           for
             l <- recurse(left, c)
@@ -358,7 +361,7 @@ sealed abstract private[cheshire] class TreeInstances:
         case Leaf(value) => Eval.now(g(c, value))
       recurse(fab, c).value
 
-    override def bifoldRight[A, B, C](fab: Tree[A, B], c: Eval[C])(
+    override def bifoldRight[A, B, C](fab: GenTree[A, B], c: Eval[C])(
         f: (A, Eval[C]) => Eval[C],
         g: (B, Eval[C]) => Eval[C]): Eval[C] = fab match
       case Node(value, left, right) =>
@@ -367,28 +370,25 @@ sealed abstract private[cheshire] class TreeInstances:
         Eval.defer(bifoldRight(left, r)(f, g))
       case Leaf(value) => Eval.defer(g(value, c))
 
-  given cheshireInstancesForUTree: Bimonad[UTree]
-    with NonEmptyTraverse[UTree]
-    with Align[UTree]
-    with
+  given Bimonad[Tree] with NonEmptyTraverse[Tree] with Align[Tree] with
 
-    override def functor: Functor[UTree] = this
+    override def functor: Functor[Tree] = this
 
-    override def pure[A](x: A): UTree[A] = Leaf(x)
+    override def pure[A](x: A): Tree[A] = Leaf(x)
 
-    override def extract[A](x: UTree[A]): A = x.value
+    override def extract[A](x: Tree[A]): A = x.value
 
-    override def map[A, B](fa: UTree[A])(f: A => B): UTree[B] = fa.map(f)
+    override def map[A, B](fa: Tree[A])(f: A => B): Tree[B] = fa.map(f)
 
-    override def flatMap[A, B](fa: UTree[A])(f: A => UTree[B]): UTree[B] =
+    override def flatMap[A, B](fa: Tree[A])(f: A => Tree[B]): Tree[B] =
       fa.flatMap(f)
 
-    override def coflatMap[A, B](fa: UTree[A])(f: UTree[A] => B): UTree[B] =
+    override def coflatMap[A, B](fa: Tree[A])(f: Tree[A] => B): Tree[B] =
       fa.coflatMap(f)
 
-    override def tailRecM[A, B](a: A)(f: A => UTree[Either[A, B]]): UTree[B] =
+    override def tailRecM[A, B](a: A)(f: A => Tree[Either[A, B]]): Tree[B] =
       val g = (a: A) => Eval.now(f(a))
-      def tailRecEval(a: A): Eval[UTree[B]] =
+      def tailRecEval(a: A): Eval[Tree[B]] =
         g(a).flatMap { ab =>
           ab.flatTraverse {
             case Left(a) => tailRecEval(a)
@@ -397,18 +397,18 @@ sealed abstract private[cheshire] class TreeInstances:
         }
       tailRecEval(a).value
 
-    override def foldMap[A, B: Monoid](fa: UTree[A])(f: A => B): B =
+    override def foldMap[A, B: Monoid](fa: Tree[A])(f: A => B): B =
       fa.reducePostOrder(f)((l, r, a) => l |+| r |+| f(a))
 
-    override def foldLeft[A, B](fa: UTree[A], b: B)(f: (B, A) => B): B =
+    override def foldLeft[A, B](fa: Tree[A], b: B)(f: (B, A) => B): B =
       reduceLeftTo(fa)(f(b, _))(f)
 
-    override def foldRight[A, B](fa: UTree[A], lb: Eval[B])(
+    override def foldRight[A, B](fa: Tree[A], lb: Eval[B])(
         f: (A, Eval[B]) => Eval[B]): Eval[B] =
       reduceRightToImpl(fa)(f(_, lb))(f)
 
-    override def reduceLeftTo[A, B](fa: UTree[A])(f: A => B)(g: (B, A) => B): B =
-      def recurse(fa: UTree[A])(f: A => B): Eval[B] = fa match
+    override def reduceLeftTo[A, B](fa: Tree[A])(f: A => B)(g: (B, A) => B): B =
+      def recurse(fa: Tree[A])(f: A => B): Eval[B] = fa match
         case Node(value, left, right) =>
           for
             l <- recurse(left)(f)
@@ -417,11 +417,11 @@ sealed abstract private[cheshire] class TreeInstances:
         case Leaf(value) => Eval.now(f(value))
       recurse(fa)(f).value
 
-    override def reduceRightTo[A, B](fa: UTree[A])(f: A => B)(
+    override def reduceRightTo[A, B](fa: Tree[A])(f: A => B)(
         g: (A, Eval[B]) => Eval[B]): Eval[B] =
       reduceRightToImpl(fa)(a => Eval.later(f(a)))(g)
 
-    private def reduceRightToImpl[A, B](fa: UTree[A])(f: A => Eval[B])(
+    private def reduceRightToImpl[A, B](fa: Tree[A])(f: A => Eval[B])(
         g: (A, Eval[B]) => Eval[B]): Eval[B] = fa match
       case Node(value, left, right) =>
         val b = Eval.defer(f(value))
@@ -429,24 +429,24 @@ sealed abstract private[cheshire] class TreeInstances:
         Eval.defer(reduceRightToImpl(left)(g(_, r))(g))
       case Leaf(value) => Eval.defer(f(value))
 
-    override def traverse[G[_]: Applicative, A, B](fa: UTree[A])(f: A => G[B]): G[UTree[B]] =
+    override def traverse[G[_]: Applicative, A, B](fa: Tree[A])(f: A => G[B]): G[Tree[B]] =
       fa.traverse(f)
 
-    override def flatTraverse[G[_]: Applicative, A, B](fa: UTree[A])(f: A => G[UTree[B]])(
-        using FlatMap[UTree]): G[UTree[B]] =
+    override def flatTraverse[G[_]: Applicative, A, B](fa: Tree[A])(f: A => G[Tree[B]])(
+        using FlatMap[Tree]): G[Tree[B]] =
       fa.flatTraverse(f)
 
-    override def nonEmptyTraverse[G[_]: Apply, A, B](fa: UTree[A])(f: A => G[B]): G[UTree[B]] =
+    override def nonEmptyTraverse[G[_]: Apply, A, B](fa: Tree[A])(f: A => G[B]): G[Tree[B]] =
       fa.traverse(f)
 
-    override def nonEmptyFlatTraverse[G[_]: Apply, A, B](fa: UTree[A])(f: A => G[UTree[B]])(
-        using FlatMap[UTree]): G[UTree[B]] =
+    override def nonEmptyFlatTraverse[G[_]: Apply, A, B](fa: Tree[A])(f: A => G[Tree[B]])(
+        using FlatMap[Tree]): G[Tree[B]] =
       fa.flatTraverse(f)
 
-    override def align[A, B](fa: UTree[A], fb: UTree[B]): UTree[Ior[A, B]] =
+    override def align[A, B](fa: Tree[A], fb: Tree[B]): Tree[Ior[A, B]] =
       alignEval(fa, fb).value
 
-    private def alignEval[A, B](fa: UTree[A], fb: UTree[B]): Eval[UTree[Ior[A, B]]] =
+    private def alignEval[A, B](fa: Tree[A], fb: Tree[B]): Eval[Tree[Ior[A, B]]] =
       (fa, fb) match
         case (Node(a, la, ra), Node(b, lb, rb)) =>
           for
@@ -465,39 +465,39 @@ sealed abstract private[cheshire] class TreeInstances:
             right <- rb.traverse(b => Eval.now(Ior.right(b)))
           yield Node(Ior.both(a, b), left, right)
 
-  given cheshireParallelForTreeZipTree: NonEmptyParallel.Aux[UTree, ZipTree] =
-    new NonEmptyParallel[UTree]:
+  given NonEmptyParallel.Aux[Tree, ZipTree] =
+    new NonEmptyParallel[Tree]:
       type F[X] = ZipTree[X]
 
-      override def flatMap: FlatMap[UTree] = cheshireInstancesForUTree
-      override def apply: Apply[ZipTree] = ZipTree.cheshireApplyForZipTree
+      override def flatMap: FlatMap[Tree] = summon[FlatMap[Tree]]
+      override def apply: Apply[ZipTree] = summon[Apply[ZipTree]]
 
-      override def parallel: UTree ~> ZipTree =
-        new (UTree ~> ZipTree):
-          override def apply[A](fa: UTree[A]): ZipTree[A] = ZipTree(fa)
+      override def parallel: Tree ~> ZipTree =
+        new (Tree ~> ZipTree):
+          override def apply[A](fa: Tree[A]): ZipTree[A] = ZipTree(fa)
 
-      override def sequential: ZipTree ~> UTree =
-        new (ZipTree ~> UTree):
-          override def apply[A](fa: ZipTree[A]): UTree[A] = fa.value
+      override def sequential: ZipTree ~> Tree =
+        new (ZipTree ~> Tree):
+          override def apply[A](fa: ZipTree[A]): Tree[A] = fa.value
 
-  given cheshireShowForTree[N: Show, L: Show]: Show[Tree[N, L]] with
-    override def show(t: Tree[N, L]): String = t.show
+  given [N: Show, L: Show]: Show[GenTree[N, L]] with
+    override def show(t: GenTree[N, L]): String = t.show
 
-  given cheshireEqForTree[N: Eq, L: Eq]: Eq[Tree[N, L]] with
-    override def eqv(x: Tree[N, L], y: Tree[N, L]): Boolean =
+  given [N: Eq, L: Eq]: Eq[GenTree[N, L]] with
+    override def eqv(x: GenTree[N, L], y: GenTree[N, L]): Boolean =
       x === y
 
-opaque type ZipTree[+A] = UTree[A]
+opaque type ZipTree[+A] = Tree[A]
 
 object ZipTree:
-  def apply[A](tree: UTree[A]): ZipTree[A] = tree
-  extension [A](tree: ZipTree[A]) def value: UTree[A] = tree
+  def apply[A](tree: Tree[A]): ZipTree[A] = tree
+  extension [A](tree: ZipTree[A]) def value: Tree[A] = tree
 
-  given cheshireApplyForZipTree: CommutativeApply[ZipTree] with
+  given CommutativeApply[ZipTree] with
     override def map[A, B](fa: ZipTree[A])(f: A => B): ZipTree[B] =
       fa.map(f)
 
     override def ap[A, B](ff: ZipTree[A => B])(fa: ZipTree[A]): ZipTree[B] =
       ff.zipWith(fa)(_(_))
 
-  given cheshireEqForZipTree[A: Eq]: Eq[ZipTree[A]] = Tree.cheshireEqForTree
+  given [A: Eq]: Eq[ZipTree[A]] = GenTree.given_Eq_GenTree
