@@ -16,21 +16,22 @@
 
 package cheshire.likelihood
 
+import scala.annotation.targetName
+
 trait Partition[F[_], G[_], R]:
 
-  trait Model:
-    def rates: G[IndexedSeq[R]]
+  type Model
+  type Matrix
+  type Partial = Ppv | Clv
+  type Ppv
+  type Clv = NodeClv | TipClv
+  type NodeClv
+  type TipClv
 
-  trait Matrix
-
-  sealed trait Partial
-  trait Ppv extends Partial
-  trait Clv extends Partial
-
-  def tips: IndexedSeq[Clv]
+  def tips: IndexedSeq[TipClv]
 
   def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int)
-      : F[(IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[Clv])]
+      : F[(IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[NodeClv])]
 
   def initModel(
       freqs: IndexedSeq[R],
@@ -39,17 +40,21 @@ trait Partition[F[_], G[_], R]:
       alpha: R,
       model: Model): G[Unit]
 
+  def rates(model: Model): G[IndexedSeq[R]]
+
   def computeMatrix(model: Model, t: R, P: Matrix): G[Unit]
 
   def forecast(x: Ppv, P: Matrix, y: Ppv): G[Unit]
 
-  def backcast(y: Clv, P: Matrix, x: Clv): G[Unit]
+  def backcast(y: Clv, P: Matrix, x: NodeClv): G[Unit]
 
-  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: Clv): G[Unit]
+  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: NodeClv): G[Unit]
 
+  @targetName("ppvProduct")
   def product(x: Ppv, y: Clv, z: Ppv): G[Unit]
 
-  def product(x: Clv, y: Clv, z: Clv): G[Unit]
+  @targetName("clvProduct")
+  def product(x: Clv, y: Clv, z: NodeClv): G[Unit]
 
   def seed(model: Model, x: Ppv): G[Unit]
 
@@ -63,7 +68,7 @@ trait Partition[F[_], G[_], R]:
       model: Model,
       ppv: Ppv,
       parentHeight: R,
-      leftCLV: Clv,
+      leftClv: Clv,
       leftHeight: R,
-      rightCLV: Clv,
+      rightClv: Clv,
       rightHeight: R)(t: R): F[LikelihoodEvaluation[R]]

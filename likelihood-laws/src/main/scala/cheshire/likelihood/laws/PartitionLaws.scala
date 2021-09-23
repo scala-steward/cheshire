@@ -17,12 +17,44 @@
 package cheshire.likelihood
 package laws
 
-import algebra.ring.Field
 import cats.Monad
+import cats.kernel.Group
 import cats.kernel.laws.*
 import cats.syntax.all.*
 
-trait PartitionLaws[F[_]: Monad, R: Field]:
+trait PartitionLaws[F[_]: Monad, R: Group]:
+
+  def forecastAssociative(
+      partition: Partition[F, F, R],
+      model: partition.Model,
+      ppv: partition.Ppv,
+      s: R,
+      t: R
+  ): F[IsEq[partition.Ppv]] = for
+    (_, matrices, ppvs, _) <- partition.allocate(0, 3, 3, 0)
+    _ <- partition.computeMatrix(model, s |+| t, matrices(0))
+    _ <- partition.computeMatrix(model, s, matrices(1))
+    _ <- partition.computeMatrix(model, t, matrices(2))
+    _ <- partition.forecast(ppv, matrices(0), ppvs(0))
+    _ <- partition.forecast(ppv, matrices(1), ppvs(1))
+    _ <- partition.forecast(ppvs(1), matrices(2), ppvs(2))
+  yield ppvs(0) <-> ppvs(2)
+
+  def backcastAssociative(
+      partition: Partition[F, F, R],
+      model: partition.Model,
+      clv: partition.Clv,
+      s: R,
+      t: R
+  ): F[IsEq[partition.Clv]] = for
+    (_, matrices, _, clvs) <- partition.allocate(0, 3, 0, 3)
+    _ <- partition.computeMatrix(model, s |+| t, matrices(0))
+    _ <- partition.computeMatrix(model, s, matrices(1))
+    _ <- partition.computeMatrix(model, t, matrices(2))
+    _ <- partition.backcast(clv, matrices(0), clvs(0))
+    _ <- partition.backcast(clv, matrices(1), clvs(1))
+    _ <- partition.backcast(clvs(1), matrices(2), clvs(2))
+  yield clvs(0) <-> clvs(2)
 
   def edgeLikelihoodConsistent(
       partition: Partition[F, F, R],
@@ -32,10 +64,31 @@ trait PartitionLaws[F[_]: Monad, R: Field]:
       t: R
   ): F[IsEq[R]] = for
     (_, matrices, _, clvs) <- partition.allocate(0, 1, 0, 1)
-    matrix = matrices(0)
-    clv1 = clvs(0)
-    _ <- partition.computeMatrix(model, t, matrix)
-    _ <- partition.backcast(clv, matrix, clv1)
+    _ <- partition.computeMatrix(model, t, matrices(0))
+    _ <- partition.backcast(clv, matrices(0), clvs(0))
     expected <- partition.integrateProduct(ppv, clv)
     got <- partition.edgeLikelihood(model, ppv, clv)(t).map(_.logLikelihood)
+  yield got <-> expected
+
+  def nodeLikelihoodConsistent(
+      partition: Partition[F, F, R],
+      model: partition.Model,
+      ppv: partition.Ppv,
+      parentHeight: R,
+      leftClv: partition.Clv,
+      leftHeight: R,
+      rightClv: partition.Clv,
+      rightHeight: R,
+      t: R
+  ): F[IsEq[R]] = for
+    (_, matrices, _, clvs) <- partition.allocate(0, 3, 0, 2)
+    _ <- partition.computeMatrix(model, parentHeight |-| t, matrices(0))
+    _ <- partition.computeMatrix(model, t |-| leftHeight, matrices(1))
+    _ <- partition.computeMatrix(model, t |-| rightHeight, matrices(2))
+    _ <- partition.backcastProduct(leftClv, matrices(1), rightClv, matrices(2), clvs(0))
+    _ <- partition.backcast(clvs(0), matrices(0), clvs(1))
+    expected <- partition.integrateProduct(ppv, clvs(2))
+    got <- partition
+      .nodeLikelihood(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(t)
+      .map(_.logLikelihood)
   yield got <-> expected
