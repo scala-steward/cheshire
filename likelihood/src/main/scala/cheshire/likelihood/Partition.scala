@@ -16,9 +16,11 @@
 
 package cheshire.likelihood
 
+import cats.effect.kernel.Resource
+
 import scala.annotation.targetName
 
-trait Partition[F[_], G[_], R]:
+trait Partition[F[_], R]:
 
   type Model
   type Matrix
@@ -30,39 +32,41 @@ trait Partition[F[_], G[_], R]:
 
   def tips: IndexedSeq[TipClv]
 
-  def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int)
-      : F[(IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[NodeClv])]
+  def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int): Resource[
+    F,
+    (IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[NodeClv])]
 
   def initModel(
       freqs: IndexedSeq[R],
       params: IndexedSeq[R],
       rate: R,
       alpha: R,
-      model: Model): G[Unit]
+      model: Model): F[Unit]
 
-  def rates(model: Model): G[IndexedSeq[R]]
+  def rates(model: Model): F[IndexedSeq[R]]
 
-  def computeMatrix(model: Model, t: R, P: Matrix): G[Unit]
+  def computeMatrix(model: Model, t: R, P: Matrix): F[Unit]
 
-  def forecast(x: Ppv, P: Matrix, y: Ppv): G[Unit]
+  def forecast(x: Ppv, P: Matrix, y: Ppv): F[Unit]
 
-  def backcast(y: Clv, P: Matrix, x: NodeClv): G[Unit]
+  def backcast(y: Clv, P: Matrix, x: NodeClv): F[Unit]
 
-  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: NodeClv): G[Unit]
+  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: NodeClv): F[Unit]
 
   @targetName("ppvProduct")
-  def product(x: Ppv, y: Clv, z: Ppv): G[Unit]
+  def product(x: Ppv, y: Clv, z: Ppv): F[Unit]
 
   @targetName("clvProduct")
-  def product(x: Clv, y: Clv, z: NodeClv): G[Unit]
+  def product(x: Clv, y: Clv, z: NodeClv): F[Unit]
 
-  def seed(model: Model, x: Ppv): G[Unit]
+  def seed(model: Model, x: Ppv): F[Unit]
 
-  def integrateProduct(x: Ppv, y: Clv): G[R]
+  def integrateProduct(x: Ppv, y: Clv): F[R]
 
-  def seedAndIntegrate(model: Model, x: Clv): G[R]
+  def seedAndIntegrate(model: Model, x: Clv): F[R]
 
-  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[R]]
+  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(
+      t: R): Resource[F, LikelihoodEvaluation[R]]
 
   def nodeLikelihood(
       model: Model,
@@ -71,4 +75,4 @@ trait Partition[F[_], G[_], R]:
       leftClv: Clv,
       leftHeight: R,
       rightClv: Clv,
-      rightHeight: R)(t: R): F[LikelihoodEvaluation[R]]
+      rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]

@@ -66,6 +66,7 @@ lazy val likelihood = project
     )
   )
   .settings(commonSettings)
+  .dependsOn(core.jvm)
 
 lazy val likelihoodLaws = project
   .in(file("likelihood-laws"))
