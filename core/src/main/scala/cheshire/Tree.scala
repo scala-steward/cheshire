@@ -88,11 +88,10 @@ sealed abstract class GenTree[+N, +L]:
   final def reducePostOrderM[F[_]: Monad, Z](f: L => F[Z])(g: (Z, Z, N) => F[Z]): F[Z] =
     this match
       case Node(value, left, right) =>
-        for {
-          l <- left.reducePostOrderM(f)(g)
-          r <- right.reducePostOrderM(f)(g)
-          b <- g(l, r, value)
-        } yield b
+        (
+          left.reducePostOrderM(f)(g),
+          right.reducePostOrderM(f)(g)
+        ).mapN(g(_, _, value)).flatten
       case Leaf(value) => f(value)
 
   final def scanPostOrder[Z](f: L => Z)(g: (Z, Z, N) => Z): GenTree[Z, Z] =
@@ -102,11 +101,10 @@ sealed abstract class GenTree[+N, +L]:
       g: (Z, Z, N) => F[Z]): F[GenTree[Z, Z]] =
     this match
       case Node(value, left, right) =>
-        for
-          l <- left.scanPostOrderM(f)(g)
-          r <- right.scanPostOrderM(f)(g)
-          b <- g(l.value, r.value, value)
-        yield Node(b, l, r)
+        (
+          left.scanPostOrderM(f)(g),
+          right.scanPostOrderM(f)(g)
+        ).mapN { (l, r) => g(l.value, r.value, value).map(Node(_, l, r)) }.flatten
       case Leaf(value) => f(value).map(Leaf(_))
 
   final def ===[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
@@ -263,10 +261,7 @@ extension [A](tree: Tree[A])
       (f(value), left.flatTraverse(f), right.flatTraverse(f)).mapN { (fb, flb, frb) =>
         def recurse(fb: Tree[B]): Eval[Tree[B]] = fb match
           case Node(value, left, right) =>
-            for
-              l <- recurse(left)
-              r <- recurse(right)
-            yield Node(value, l, r)
+            (recurse(left), recurse(right)).mapN(Node(value, _, _))
           case Leaf(value) => Eval.now(Node(value, flb, frb))
         recurse(fb).value
       }
@@ -287,11 +282,7 @@ extension [A](tree: Tree[A])
     def recurse(button: Button[A, A]): F[Tree[B]] =
       (button.left, button.right) match
         case (Some(left), Some(right)) =>
-          for
-            l <- recurse(left)
-            r <- recurse(right)
-            b <- f(button)
-          yield Node(b, l, r)
+          (recurse(left), recurse(right), f(button)).mapN((l, r, b) => Node(b, l, r))
         case _ => f(button).map(Leaf(_))
     recurse(tree.button)
 
@@ -301,11 +292,12 @@ extension [A](tree: Tree[A])
   def scanPreOrderM[F[_]: Monad, B](f: A => F[B])(g: (B, A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
-        for
-          b <- f(value)
-          l <- left.scanPreOrderM(g(b, _))(g)
-          r <- right.scanPreOrderM(g(b, _))(g)
-        yield Node(b, l, r)
+        f(value).flatMap { b =>
+          (
+            left.scanPreOrderM(g(b, _))(g),
+            right.scanPreOrderM(g(b, _))(g)
+          ).mapN(Node(b, _, _))
+        }
       case Leaf(value) => f(value).map(Leaf(_))
 
   def scanPreOrderOriented[B](f: A => B)(g: (Oriented[B], A) => B): Tree[B] =
@@ -315,11 +307,12 @@ extension [A](tree: Tree[A])
       g: (Oriented[B], A) => F[B]): F[Tree[B]] =
     tree match
       case Node(value, left, right) =>
-        for
-          b <- f(value)
-          l <- left.scanPreOrderOrientedM(g(Left(b), _))(g)
-          r <- right.scanPreOrderOrientedM(g(Right(b), _))(g)
-        yield Node(b, l, r)
+        f(value).flatMap { b =>
+          (
+            left.scanPreOrderOrientedM(g(Left(b), _))(g),
+            right.scanPreOrderOrientedM(g(Right(b), _))(g)
+          ).mapN(Node(b, _, _))
+        }
       case Leaf(value) => f(value).map(Leaf(_))
 
   def zip[B](that: Tree[B]): Tree[(A, B)] =
@@ -331,11 +324,11 @@ extension [A](tree: Tree[A])
   def zipWithM[F[_]: Monad, B, Z](that: Tree[B])(f: (A, B) => F[Z]): F[Tree[Z]] =
     (tree, that: Tree[B]) match
       case (Node(a, thisLeft, thisRight), Node(b, thatLeft, thatRight)) =>
-        for
-          l <- thisLeft.zipWithM(thatLeft)(f)
-          r <- thisRight.zipWithM(thatRight)(f)
-          z <- f(a, b)
-        yield Node(z, l, r)
+        (
+          f(a, b),
+          thisLeft.zipWithM(thatLeft)(f),
+          thisRight.zipWithM(thatRight)(f)
+        ).mapN(Node(_, _, _))
       case _ => f(tree.value, that.value).map(Leaf(_))
 
 sealed abstract private[cheshire] class GenTreeInstances:
@@ -449,21 +442,21 @@ sealed abstract private[cheshire] class GenTreeInstances:
     private def alignEval[A, B](fa: Tree[A], fb: Tree[B]): Eval[Tree[Ior[A, B]]] =
       (fa, fb) match
         case (Node(a, la, ra), Node(b, lb, rb)) =>
-          for
-            left <- alignEval(la, lb)
-            right <- alignEval(ra, rb)
-          yield Node(Ior.both(a, b), left, right)
+          (
+            alignEval(la, lb),
+            alignEval(ra, rb)
+          ).mapN(Node(Ior.both(a, b), _, _))
         case (Leaf(a), Leaf(b)) => Eval.now(Leaf(Ior.both(a, b)))
         case (Node(a, la, ra), Leaf(b)) =>
-          for
-            left <- la.traverse(a => Eval.now(Ior.left(a)))
-            right <- ra.traverse(a => Eval.now(Ior.left(a)))
-          yield Node(Ior.both(a, b), left, right)
+          (
+            la.traverse(a => Eval.now(Ior.left(a))),
+            ra.traverse(a => Eval.now(Ior.left(a)))
+          ).mapN(Node(Ior.both(a, b), _, _))
         case (Leaf(a), Node(b, lb, rb)) =>
-          for
-            left <- lb.traverse(b => Eval.now(Ior.right(b)))
-            right <- rb.traverse(b => Eval.now(Ior.right(b)))
-          yield Node(Ior.both(a, b), left, right)
+          (
+            lb.traverse(b => Eval.now(Ior.right(b))),
+            rb.traverse(b => Eval.now(Ior.right(b)))
+          ).mapN(Node(Ior.both(a, b), _, _))
 
   given NonEmptyParallel.Aux[Tree, ZipTree] =
     new NonEmptyParallel[Tree]:
