@@ -74,10 +74,10 @@ trait Partition[F[_], R]:
 
   trait NodeLikelihood:
     def apply(
-      model: Model,
-      ppv: Ppv,
-      parentHeight: R,
-      leftClv: Clv,
-      leftHeight: R,
-      rightClv: Clv,
-      rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]
+        model: Model,
+        ppv: Ppv,
+        parentHeight: R,
+        leftClv: Clv,
+        leftHeight: R,
+        rightClv: Clv,
+        rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]
