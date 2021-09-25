@@ -65,10 +65,15 @@ trait Partition[F[_], R]:
 
   def seedAndIntegrate(model: Model, x: Clv): F[R]
 
-  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(
-      t: R): Resource[F, LikelihoodEvaluation[R]]
+  def edgeLikelihood: Resource[F, EdgeLikelihood]
 
-  def nodeLikelihood(
+  trait EdgeLikelihood:
+    def apply(model: Model, ppv: Ppv, clv: Clv)(t: R): Resource[F, LikelihoodEvaluation[R]]
+
+  def nodeLikelihood: Resource[F, NodeLikelihood]
+
+  trait NodeLikelihood:
+    def apply(
       model: Model,
       ppv: Ppv,
       parentHeight: R,

@@ -71,7 +71,7 @@ trait PartitionLaws[F[_]: MonadCancelThrow, R: Group]:
       _ <- partition.computeMatrix(model, t, matrices(0))
       _ <- partition.backcast(clv, matrices(0), clvs(0))
       expected <- partition.integrateProduct(ppv, clv)
-      got <- partition.edgeLikelihood(model, ppv, clv)(t).use(_.logLikelihood.pure)
+      got <- partition.edgeLikelihood.flatMap(_(model, ppv, clv)(t)).use(_.logLikelihood.pure)
     yield got <-> expected
   }
 
@@ -94,7 +94,8 @@ trait PartitionLaws[F[_]: MonadCancelThrow, R: Group]:
       _ <- partition.backcast(clvs(0), matrices(0), clvs(1))
       expected <- partition.integrateProduct(ppv, clvs(2))
       got <- partition
-        .nodeLikelihood(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(t)
+        .nodeLikelihood
+        .flatMap(_(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(t))
         .use(_.logLikelihood.pure)
     yield got <-> expected
   }
