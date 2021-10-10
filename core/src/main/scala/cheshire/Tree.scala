@@ -46,9 +46,9 @@ sealed abstract class GenTree[+N, +L]:
 
   final def button: Button[N, L] = Button(this, Nil)
 
-  final def preorder: Button[N, L] = button
+  final def startPreOrder: Button[N, L] = button
 
-  final def postorder: Button[N, L] =
+  final def startPostOrder: Button[N, L] =
     Monad[Option]
       .iterateUntilM(button)(_.left)(_.at.isLeaf)
       // Should never be called
@@ -106,6 +106,12 @@ sealed abstract class GenTree[+N, +L]:
           right.scanPostOrderM(f)(g)
         ).mapN { (l, r) => g(l.value, r.value, value).map(Node(_, l, r)) }.flatten
       case Leaf(value) => f(value).map(Leaf(_))
+
+  final def preOrder[F[_]: Monad](f: Button[N, L] => F[Unit]): F[Unit] =
+    button.preOrder(f)
+
+  final def postOrder[F[_]: Monad](f: Button[N, L] => F[Unit]): F[Unit] =
+    button.postOrder(f)
 
   final def ===[N1 >: N: Eq, L1 >: L: Eq](that: GenTree[N1, L1]): Boolean =
     def recurse(x: GenTree[N1, L1], y: GenTree[N1, L1]): Eval[Boolean] = (x, y) match
@@ -172,12 +178,18 @@ object GenTree extends GenTreeInstances:
       else if isRight then up.flatMap(_.left)
       else None
 
-    def nextPreorder: Option[Button[N, L]] =
+    def preOrder[F[_]](f: Button[N, L] => F[Unit])(using F: Monad[F]): F[Unit] =
+      f(this) >> (left.fold(F.unit)(_.preOrder(f)) *> right.fold(F.unit)(_.preOrder(f)))
+
+    def postOrder[F[_]](f: Button[N, L] => F[Unit])(using F: Monad[F]): F[Unit] =
+      (left.fold(F.unit)(_.postOrder(f)) *> right.fold(F.unit)(_.postOrder(f))) >> f(this)
+
+    def preOrderSuccessor: Option[Button[N, L]] =
       left.orElse {
         Monad[Option].iterateUntilM(this)(_.up)(_.isLeft).flatMap(_.sibling)
       }
 
-    def nextPostorder: Option[Button[N, L]] =
+    def postOrderSuccessor: Option[Button[N, L]] =
       if isLeft then sibling.flatMap(Monad[Option].iterateUntilM(_)(_.left)(_.at.isLeaf))
       else up
 
