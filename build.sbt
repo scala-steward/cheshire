@@ -12,7 +12,7 @@ ThisBuild / scmInfo := Some(
     url("https://github.com/armanbilge/cheshire"),
     "git@github.com:armanbilge/cheshire.git"))
 
-val Scala3 = "3.0.2"
+val Scala3 = "3.1.0"
 ThisBuild / crossScalaVersions := Seq(Scala3)
 
 replaceCommandAlias(
