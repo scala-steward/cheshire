@@ -13,6 +13,7 @@ ThisBuild / scmInfo := Some(
   ScmInfo(
     url("https://github.com/armanbilge/cheshire"),
     "git@github.com:armanbilge/cheshire.git"))
+sonatypeCredentialHost := "s01.oss.sonatype.org"
 
 val Scala3 = "3.1.0"
 ThisBuild / crossScalaVersions := Seq(Scala3)
