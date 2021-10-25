@@ -6,6 +6,8 @@ ThisBuild / publishFullName := "Arman Bilge"
 ThisBuild / startYear := Some(2021)
 
 enablePlugins(SonatypeCiReleasePlugin)
+ThisBuild / spiewakCiReleaseSnapshots := true
+ThisBuild / spiewakMainBranches := Seq("main")
 ThisBuild / homepage := Some(url("https://github.com/armanbilge/cheshire"))
 ThisBuild / scmInfo := Some(
   ScmInfo(
