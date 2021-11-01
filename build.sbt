@@ -30,7 +30,7 @@ val CatsEffectVersion = "3.2.9"
 val DisciplineVersion = "1.3.0"
 val ScodecBitsVersion = "1.1.29"
 val Specs2Version = "5.0.0-RC-16"
-val DisciplineSpecs2Version = "1.2-7-e3ce260"
+val DisciplineSpecs2Version = "2.0-17-76e46a4"
 
 val commonSettings = Seq(
   scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future"),
@@ -51,7 +51,7 @@ lazy val core = crossProject(JSPlatform, JVMPlatform)
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % CatsVersion,
       "org.typelevel" %%% "cats-laws" % CatsVersion % Test,
-      "io.vasilev" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
+      "org.discipline" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
       "org.specs2" %%% "specs2-core" % Specs2Version % Test,
       "org.specs2" %%% "specs2-scalacheck" % Specs2Version % Test
     )
