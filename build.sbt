@@ -51,7 +51,7 @@ lazy val core = crossProject(JSPlatform, JVMPlatform)
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % CatsVersion,
       "org.typelevel" %%% "cats-laws" % CatsVersion % Test,
-      "org.discipline" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
+      "org.typelevel" %%% "discipline-specs2" % DisciplineSpecs2Version % Test,
       "org.specs2" %%% "specs2-core" % Specs2Version % Test,
       "org.specs2" %%% "specs2-scalacheck" % Specs2Version % Test
     )
