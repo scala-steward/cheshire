@@ -79,7 +79,7 @@ lazy val likelihoodLaws = project
       "org.typelevel" %%% "algebra" % AlgebraVersion,
       "org.typelevel" %%% "cats-kernel-laws" % CatsVersion,
       "org.typelevel" %%% "discipline-core" % DisciplineVersion,
-      "org.typelevel" %%% "cats-effect" % CatsEffectVersion % Test
+      "org.typelevel" %%% "cats-effect-laws" % CatsEffectVersion
     )
   )
   .settings(commonSettings)

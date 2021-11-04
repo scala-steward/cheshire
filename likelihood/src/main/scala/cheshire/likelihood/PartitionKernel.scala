@@ -30,6 +30,8 @@ trait PartitionKernel[F[_], R]:
   type NodeClv
   type TipClv
 
+  def categoryCount: Int
+
   def tips: IndexedSeq[TipClv]
 
   def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int): Resource[

@@ -32,6 +32,8 @@ trait Partition[F[_], R]:
   type NodeClv
   type TipClv
 
+  def categoryCount: Int
+
   def tips: IndexedSeq[TipClv]
 
   def model(freqs: IndexedSeq[R], params: IndexedSeq[R], rate: R, alpha: R): F[Model]
@@ -78,6 +80,8 @@ object Partition:
       type Ppv = partition.Ppv
       type NodeClv = partition.NodeClv
       type TipClv = partition.TipClv
+
+      def categoryCount: Int = partition.categoryCount
 
       def tips: IndexedSeq[TipClv] = partition.tips
 
