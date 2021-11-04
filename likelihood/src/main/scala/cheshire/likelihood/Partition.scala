@@ -17,6 +17,8 @@
 package cheshire.likelihood
 
 import cats.effect.kernel.Resource
+import cats.effect.kernel.syntax.all.*
+import cats.syntax.all.*
 
 import scala.annotation.targetName
 
@@ -30,54 +32,117 @@ trait Partition[F[_], R]:
   type NodeClv
   type TipClv
 
+  def categoryCount: Int
+
   def tips: IndexedSeq[TipClv]
 
-  def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int): Resource[
-    F,
-    (IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[NodeClv])]
-
-  def initModel(
-      freqs: IndexedSeq[R],
-      params: IndexedSeq[R],
-      rate: R,
-      alpha: R,
-      model: Model): F[Unit]
+  def model(freqs: IndexedSeq[R], params: IndexedSeq[R], rate: R, alpha: R): F[Model]
 
   def rates(model: Model): F[IndexedSeq[R]]
 
-  def computeMatrix(model: Model, t: R, P: Matrix): F[Unit]
+  def matrix(model: Model, t: R): F[Matrix]
 
-  def forecast(x: Ppv, P: Matrix, y: Ppv): F[Unit]
+  def forecast(x: Ppv, P: Matrix): F[Ppv]
 
-  def backcast(y: Clv, P: Matrix, x: NodeClv): F[Unit]
+  def backcast(y: Clv, P: Matrix): F[NodeClv]
 
-  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix, x: NodeClv): F[Unit]
+  def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix): F[NodeClv]
 
   @targetName("ppvProduct")
-  def product(x: Ppv, y: Clv, z: Ppv): F[Unit]
+  def product(x: Ppv, y: Clv): F[Ppv]
 
   @targetName("clvProduct")
-  def product(x: Clv, y: Clv, z: NodeClv): F[Unit]
+  def product(x: Clv, y: Clv): F[NodeClv]
 
-  def seed(model: Model, x: Ppv): F[Unit]
+  def seed(model: Model): F[Ppv]
 
   def integrateProduct(x: Ppv, y: Clv): F[R]
 
   def seedAndIntegrate(model: Model, x: Clv): F[R]
 
-  def edgeLikelihood: Resource[F, EdgeLikelihood]
+  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[R]]
 
-  trait EdgeLikelihood:
-    def apply(model: Model, ppv: Ppv, clv: Clv)(t: R): Resource[F, LikelihoodEvaluation[R]]
+  def nodeLikelihood(
+      model: Model,
+      ppv: Ppv,
+      parentHeight: R,
+      leftClv: Clv,
+      leftHeight: R,
+      rightClv: Clv,
+      rightHeight: R)(t: R): F[LikelihoodEvaluation[R]]
 
-  def nodeLikelihood: Resource[F, NodeLikelihood]
+object Partition:
 
-  trait NodeLikelihood:
-    def apply(
-        model: Model,
-        ppv: Ppv,
-        parentHeight: R,
-        leftClv: Clv,
-        leftHeight: R,
-        rightClv: Clv,
-        rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]
+  def fromKernel[F[_], R](partition: PartitionKernel[F, R]): Partition[Resource[F, _], R] =
+    new:
+      type Model = partition.Model
+      type Matrix = partition.Matrix
+      type Ppv = partition.Ppv
+      type NodeClv = partition.NodeClv
+      type TipClv = partition.TipClv
+
+      def categoryCount: Int = partition.categoryCount
+
+      def tips: IndexedSeq[TipClv] = partition.tips
+
+      def model(
+          freqs: IndexedSeq[R],
+          params: IndexedSeq[R],
+          rate: R,
+          alpha: R): Resource[F, Model] = partition
+        .allocate(1, 0, 0, 0)
+        .map(_._1(0))
+        .evalTap(partition.initModel(freqs, params, rate, alpha, _))
+
+      def rates(model: Model): Resource[F, IndexedSeq[R]] = partition.rates(model).toResource
+
+      def matrix(model: Model, t: R): Resource[F, Matrix] =
+        partition
+          .allocate(0, 1, 0, 0)
+          .map(_._2(0))
+          .evalTap(partition.computeMatrix(model, t, _))
+
+      def forecast(x: Ppv, P: Matrix): Resource[F, Ppv] =
+        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.forecast(x, P, _))
+
+      def backcast(y: Clv, P: Matrix): Resource[F, NodeClv] =
+        partition.allocate(0, 0, 0, 1).map(_._4(0)).evalTap(partition.backcast(y, P, _))
+
+      def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix): Resource[F, NodeClv] =
+        partition
+          .allocate(0, 0, 0, 1)
+          .map(_._4(0))
+          .evalTap(partition.backcastProduct(y, Py, z, Pz, _))
+
+      @targetName("ppvProduct")
+      def product(x: Ppv, y: Clv): Resource[F, Ppv] =
+        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.product(x, y, _))
+
+      @targetName("clvProduct")
+      def product(x: Clv, y: Clv): Resource[F, NodeClv] =
+        partition.allocate(0, 0, 0, 1).map(_._4(0)).evalTap(partition.product(x, y, _))
+
+      def seed(model: Model): Resource[F, Ppv] =
+        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.seed(model, _))
+
+      def integrateProduct(x: Ppv, y: Clv): Resource[F, R] =
+        partition.integrateProduct(x, y).toResource
+
+      def seedAndIntegrate(model: Model, x: Clv): Resource[F, R] =
+        partition.seedAndIntegrate(model, x).toResource
+
+      def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(
+          t: R): Resource[F, LikelihoodEvaluation[R]] =
+        partition.edgeLikelihood.flatMap(_(model, ppv, clv)(t))
+
+      def nodeLikelihood(
+          model: Model,
+          ppv: Ppv,
+          parentHeight: R,
+          leftClv: Clv,
+          leftHeight: R,
+          rightClv: Clv,
+          rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]] =
+        partition
+          .nodeLikelihood
+          .flatMap(_(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(t))

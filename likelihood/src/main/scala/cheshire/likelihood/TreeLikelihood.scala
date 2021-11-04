@@ -29,13 +29,13 @@ import TreeLikelihood.*
 trait TreeLikelihood[F[_], R]:
 
   def logLikelihood[R: Group, N, L](
-      partition: Partition[F, R],
+      partition: PartitionKernel[F, R],
       getN: N => PostOrderNode[R, partition.Matrix, partition.NodeClv],
       getL: L => PostOrderLeaf[R, partition.Matrix, partition.Clv]
   )(model: partition.Model, tree: GenTree[N, L]): F[R]
 
   def populate[R: Group, N, L](
-      partition: Partition[F, R],
+      partition: PartitionKernel[F, R],
       getN: N => PreOrderNode[R, partition.Matrix, partition.Ppv, partition.NodeClv],
       getL: L => PostOrderLeaf[R, partition.Matrix, partition.Clv]
   )(
@@ -82,7 +82,7 @@ object TreeLikelihood:
   def sequential[F[_], R: Group](using F: Monad[F]): TreeLikelihood[F, R] =
     new TreeLikelihood[F, R]:
       def logLikelihood[R: Group, N, L](
-          partition: Partition[F, R],
+          partition: PartitionKernel[F, R],
           getN: N => PostOrderNode[R, partition.Matrix, partition.NodeClv],
           getL: L => PostOrderLeaf[R, partition.Matrix, partition.Clv]
       )(model: partition.Model, tree: GenTree[N, L]): F[R] =
@@ -107,7 +107,7 @@ object TreeLikelihood:
           }
 
       def populate[R: Group, N, L](
-          partition: Partition[F, R],
+          partition: PartitionKernel[F, R],
           getN: N => PreOrderNode[R, partition.Matrix, partition.Ppv, partition.NodeClv],
           getL: L => PostOrderLeaf[R, partition.Matrix, partition.Clv]
       )(

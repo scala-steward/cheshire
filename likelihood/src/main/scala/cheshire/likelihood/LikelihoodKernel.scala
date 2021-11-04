@@ -25,4 +25,4 @@ trait LikelihoodKernel[F[_], R, -N]:
       categoryCount: Int,
       sequences: IndexedSeq[BitVector],
       siteWeights: IndexedSeq[Int]
-  ): F[Partition[F, R]]
+  ): F[PartitionKernel[F, R]]

@@ -26,8 +26,7 @@ trait LikelihoodEvaluation[R]:
 
 object LikelihoodEvaluation:
   def apply[R](ll: R, d: R, dd: R): LikelihoodEvaluation[R] =
-    new {
+    new:
       val logLikelihood = ll
       val derivative = d
       val secondDerivative = dd
-    }
