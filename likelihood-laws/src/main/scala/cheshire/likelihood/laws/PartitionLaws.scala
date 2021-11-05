@@ -25,14 +25,12 @@ import cats.kernel.laws.CommutativeSemigroupLaws
 import cats.syntax.all.*
 
 object PartitionLaws:
-  def apply[F[_]: Monad, R: Field](
-      partition: Partition[F, R],
-      epsilon: R): PartitionLaws[F, R] =
-    new PartitionLaws(partition, epsilon) {}
+  def apply[F[_]: Monad, R: Field](partition: Partition[F, R]): PartitionLaws[F, R] =
+    new PartitionLaws(partition) {}
 
-trait PartitionLaws[F[_], R](val partition: Partition[F, R], epsilon: R)(
-    using F: Monad[F],
-    R: Field[R]):
+trait PartitionLaws[F[_], R](val partition: Partition[F, R])(using F: Monad[F], R: Field[R]):
+
+  val epsilon: R = R.fromDouble(1.489966442575134e-8)
 
   import partition.*
 

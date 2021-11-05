@@ -28,6 +28,7 @@ val AlgebraVersion = "2.2.3"
 val CatsVersion = "2.6.1"
 val CatsEffectVersion = "3.2.9"
 val DisciplineVersion = "1.3.0"
+val RefinedVersion = "0.9.27"
 val ScodecBitsVersion = "1.1.29"
 val Specs2Version = "5.0.0-RC-16"
 val DisciplineSpecs2Version = "2.0-17-76e46a4"
@@ -79,7 +80,8 @@ lazy val likelihoodLaws = project
       "org.typelevel" %%% "algebra" % AlgebraVersion,
       "org.typelevel" %%% "cats-kernel-laws" % CatsVersion,
       "org.typelevel" %%% "discipline-core" % DisciplineVersion,
-      "org.typelevel" %%% "cats-effect-laws" % CatsEffectVersion
+      "org.typelevel" %%% "cats-effect-laws" % CatsEffectVersion,
+      "eu.timepit" %%% "refined-scalacheck" % RefinedVersion
     )
   )
   .settings(commonSettings)
