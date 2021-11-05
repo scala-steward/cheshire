@@ -28,20 +28,22 @@ object PartitionLaws:
   def apply[F[_]: Monad, R: Field](partition: Partition[F, R]): PartitionLaws[F, R] =
     new PartitionLaws(partition) {}
 
-trait PartitionLaws[F[_], R](val partition: Partition[F, R])(using F: Monad[F], R: Field[R]):
+trait PartitionLaws[F[_], R](val partition: Partition[F, R])(
+    using val F: Monad[F],
+    R: Field[R]):
 
   val epsilon: R = R.fromDouble(1.489966442575134e-8)
 
   import partition.*
 
   extension (x: R)
-    private def +(y: R): R = R.plus(x, y)
-    private def -(y: R): R = R.minus(x, y)
-    private def unary_- : R = R.negate(x)
-    private def *(y: R): R = R.times(x, y)
-    private def /(y: R): R = R.div(x, y)
-    private def **(n: Int): R = R.pow(x, n)
-  extension (n: Int) private def *(y: R): R = R.sumN(y, n)
+    def +(y: R): R = R.plus(x, y)
+    def -(y: R): R = R.minus(x, y)
+    def unary_- : R = R.negate(x)
+    def *(y: R): R = R.times(x, y)
+    def /(y: R): R = R.div(x, y)
+    def **(n: Int): R = R.pow(x, n)
+  extension (n: Int) def *(y: R): R = R.sumN(y, n)
 
   def meanRate(
       freqs: IndexedSeq[R],

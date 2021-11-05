@@ -21,6 +21,7 @@ import cats.Monad
 import cats.syntax.all.*
 import eu.timepit.refined.api.Refined
 import eu.timepit.refined.auto.*
+import eu.timepit.refined.numeric.NonNegative
 import eu.timepit.refined.numeric.Positive
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
@@ -43,6 +44,23 @@ object Params:
     }
   )
 
+final case class NodeHeights[R](
+    leftHeight: R,
+    rightHeight: R,
+    parentHeight: R,
+    t: R
+)
+object NodeHeights:
+  given Arbitrary[NodeHeights[Double]] = Arbitrary(
+    for
+      leftHeight <- Gen.exponential(1)
+      rightHeight <- Gen.exponential(1)
+      maxChildHeight = math.max(leftHeight, rightHeight)
+      parentHeight <- Gen.exponential(1).map(_ + maxChildHeight)
+      t <- Gen.chooseNum(0, 1).map(maxChildHeight + (parentHeight - maxChildHeight) * _)
+    yield NodeHeights(leftHeight, rightHeight, parentHeight, t)
+  )
+
 def arbitraryModel[F[_], R](partition: Partition[F, R])(
     using Arbitrary[Freqs[R]],
     Arbitrary[Params[R]],
@@ -58,10 +76,10 @@ def arbitraryModel[F[_], R](partition: Partition[F, R])(
 
 def arbitraryMatrix[F[_]: Monad, R](partition: Partition[F, R])(
     using Arbitrary[F[partition.Model]],
-    Arbitrary[R Refined Positive]): Arbitrary[F[partition.Matrix]] =
+    Arbitrary[R Refined NonNegative]): Arbitrary[F[partition.Matrix]] =
   Arbitrary(
     for
       model <- Arbitrary.arbitrary[F[partition.Model]]
-      t <- Arbitrary.arbitrary[R Refined Positive]
+      t <- Arbitrary.arbitrary[R Refined NonNegative]
     yield model.flatMap(partition.matrix(_, t))
   )
