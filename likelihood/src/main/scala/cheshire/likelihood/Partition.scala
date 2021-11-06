@@ -89,41 +89,33 @@ object Partition:
           freqs: IndexedSeq[R],
           params: IndexedSeq[R],
           rate: R,
-          alpha: R): Resource[F, Model] = partition
-        .allocate(1, 0, 0, 0)
-        .map(_._1(0))
-        .evalTap(partition.initModel(freqs, params, rate, alpha, _))
+          alpha: R): Resource[F, Model] =
+        partition.allocateModel.evalTap(partition.initModel(freqs, params, rate, alpha, _))
 
       def rates(model: Model): Resource[F, IndexedSeq[R]] = partition.rates(model).toResource
 
       def matrix(model: Model, t: R): Resource[F, Matrix] =
-        partition
-          .allocate(0, 1, 0, 0)
-          .map(_._2(0))
-          .evalTap(partition.computeMatrix(model, t, _))
+        partition.allocateMatrix.evalTap(partition.computeMatrix(model, t, _))
 
       def forecast(x: Ppv, P: Matrix): Resource[F, Ppv] =
-        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.forecast(x, P, _))
+        partition.allocatePpv.evalTap(partition.forecast(x, P, _))
 
       def backcast(y: Clv, P: Matrix): Resource[F, NodeClv] =
-        partition.allocate(0, 0, 0, 1).map(_._4(0)).evalTap(partition.backcast(y, P, _))
+        partition.allocateClv.evalTap(partition.backcast(y, P, _))
 
       def backcastProduct(y: Clv, Py: Matrix, z: Clv, Pz: Matrix): Resource[F, NodeClv] =
-        partition
-          .allocate(0, 0, 0, 1)
-          .map(_._4(0))
-          .evalTap(partition.backcastProduct(y, Py, z, Pz, _))
+        partition.allocateClv.evalTap(partition.backcastProduct(y, Py, z, Pz, _))
 
       @targetName("ppvProduct")
       def product(x: Ppv, y: Clv): Resource[F, Ppv] =
-        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.product(x, y, _))
+        partition.allocatePpv.evalTap(partition.product(x, y, _))
 
       @targetName("clvProduct")
       def product(x: Clv, y: Clv): Resource[F, NodeClv] =
-        partition.allocate(0, 0, 0, 1).map(_._4(0)).evalTap(partition.product(x, y, _))
+        partition.allocateClv.evalTap(partition.product(x, y, _))
 
       def seed(model: Model): Resource[F, Ppv] =
-        partition.allocate(0, 0, 1, 0).map(_._3(0)).evalTap(partition.seed(model, _))
+        partition.allocatePpv.evalTap(partition.seed(model, _))
 
       def integrateProduct(x: Ppv, y: Clv): Resource[F, R] =
         partition.integrateProduct(x, y).toResource

@@ -34,9 +34,13 @@ trait PartitionKernel[F[_], R]:
 
   def tips: IndexedSeq[TipClv]
 
-  def allocate(modelCount: Int, matrixCount: Int, ppvCount: Int, clvCount: Int): Resource[
-    F,
-    (IndexedSeq[Model], IndexedSeq[Matrix], IndexedSeq[Ppv], IndexedSeq[NodeClv])]
+  def allocateModel: Resource[F, Model]
+
+  def allocateMatrix: Resource[F, Matrix]
+
+  def allocatePpv: Resource[F, Ppv]
+
+  def allocateClv: Resource[F, NodeClv]
 
   def initModel(
       freqs: IndexedSeq[R],
