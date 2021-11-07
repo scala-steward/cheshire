@@ -16,6 +16,7 @@
 
 package cheshire.likelihood
 
+import cats.effect.kernel.Resource
 import scodec.bits.BitVector
 
 trait LikelihoodKernel[F[_], R, -N]:
@@ -25,4 +26,4 @@ trait LikelihoodKernel[F[_], R, -N]:
       categoryCount: Int,
       sequences: IndexedSeq[BitVector],
       siteWeights: IndexedSeq[Int]
-  ): F[PartitionKernel[F, R]]
+  ): Resource[F, PartitionKernel[F, R]]
