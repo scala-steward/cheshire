@@ -17,7 +17,7 @@
 package cheshire.likelihood
 
 import cats.Applicative
-import cats.syntax.all.*
+import cats.kernel.Eq
 
 trait LikelihoodEvaluation[R]:
   def logLikelihood: R
@@ -30,3 +30,6 @@ object LikelihoodEvaluation:
       val logLikelihood = ll
       val derivative = d
       val secondDerivative = dd
+
+  given [R: Eq]: Eq[LikelihoodEvaluation[R]] =
+    Eq.by(l => (l.logLikelihood, l.derivative, l.secondDerivative))
