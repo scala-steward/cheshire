@@ -25,16 +25,19 @@ import cats.kernel.laws.CommutativeSemigroupLaws
 import cats.syntax.all.*
 
 object PartitionLaws:
-  def apply[F[_]: Monad, R: Field](partition: Partition[F, R]): PartitionLaws[F, R] =
+  def apply[F[_]: Monad, R: Field, Model, Matrix, Ppv, NodeClv, TipClv](
+      partition: Partition.Aux[F, R, Model, Matrix, Ppv, NodeClv, TipClv])
+      : PartitionLaws[F, R, Model, Matrix, Ppv, NodeClv, TipClv] =
     new PartitionLaws(partition) {}
 
-trait PartitionLaws[F[_], R](val partition: Partition[F, R])(
+trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
+    val partition: Partition.Aux[F, R, Model, Matrix, Ppv, NodeClv, TipClv])(
     using val F: Monad[F],
     R: Field[R]):
 
   val epsilon: R = R.fromDouble(1.489966442575134e-8)
 
-  import partition.*
+  type Clv = NodeClv | TipClv
 
   extension (x: R)
     def +(y: R): R = R.plus(x, y)

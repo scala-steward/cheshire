@@ -73,6 +73,14 @@ trait Partition[F[_], R]:
 
 object Partition:
 
+  type Aux[F[_], R, Model0, Matrix0, Ppv0, NodeClv0, TipClv0] = Partition[F, R] {
+    type Model = Model0
+    type Matrix = Matrix0
+    type Ppv = Ppv0
+    type NodeClv = NodeClv0
+    type TipClv = TipClv0
+  }
+
   def fromKernel[F[_], R](partition: PartitionKernel[F, R]): Partition[Resource[F, _], R] =
     new:
       type Model = partition.Model

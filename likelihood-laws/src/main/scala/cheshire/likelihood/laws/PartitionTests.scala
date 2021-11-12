@@ -33,11 +33,13 @@ import org.scalacheck.Prop.forAll
 import org.typelevel.discipline.Laws
 
 object PartitionTests:
-  def apply[F[_]: Monad, R: Field: Order](partition: Partition[F, R]): PartitionTests[F, R] =
+  def apply[F[_]: Monad, R: Field: Order, Model, Matrix, Ppv, NodeClv, TipClv](
+      partition: Partition.Aux[F, R, Model, Matrix, Ppv, NodeClv, TipClv])
+      : PartitionTests[F, R, Model, Matrix, Ppv, NodeClv, TipClv] =
     new PartitionTests(PartitionLaws(partition)) {}
 
-trait PartitionTests[F[_], R: Order](
-    val laws: PartitionLaws[F, R]
+trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
+    val laws: PartitionLaws[F, R, Model, Matrix, Ppv, NodeClv, TipClv]
 ) extends Laws:
   self =>
 
@@ -46,7 +48,6 @@ trait PartitionTests[F[_], R: Order](
 
   import laws.F
   import laws.*
-  import laws.partition.*
 
   def partition(
       using Eq[F[R]],
