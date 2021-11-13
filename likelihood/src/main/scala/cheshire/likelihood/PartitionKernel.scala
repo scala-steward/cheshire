@@ -87,3 +87,13 @@ trait PartitionKernel[F[_], R]:
         leftHeight: R,
         rightClv: Clv,
         rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]
+
+object PartitionKernel:
+
+  type Aux[F[_], R, Model0, Matrix0, Ppv0, NodeClv0, TipClv0] = PartitionKernel[F, R] {
+    type Model = Model0
+    type Matrix = Matrix0
+    type Ppv = Ppv0
+    type NodeClv = NodeClv0
+    type TipClv = TipClv0
+  }

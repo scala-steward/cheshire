@@ -81,8 +81,15 @@ object Partition:
     type TipClv = TipClv0
   }
 
-  def fromKernel[F[_], R](partition: PartitionKernel[F, R]): Partition[Resource[F, _], R] =
-    new:
+  def fromKernel[F[_], R](partition: PartitionKernel[F, R]): Partition.Aux[
+    Resource[F, _],
+    R,
+    partition.Model,
+    partition.Matrix,
+    partition.Ppv,
+    partition.NodeClv,
+    partition.TipClv] =
+    new Partition[Resource[F, _], R]:
       type Model = partition.Model
       type Matrix = partition.Matrix
       type Ppv = partition.Ppv
