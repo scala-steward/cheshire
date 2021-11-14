@@ -293,6 +293,30 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
     yield l
     left <-> right
 
+  def forecastBackcastConsistency(
+      model: F[Model],
+      ppv: F[Ppv],
+      clv: F[Clv],
+      t: R
+  ): IsEq[F[R]] =
+    val left = for
+      model <- model
+      matrix <- partition.matrix(model, t)
+      ppv <- ppv
+      ppv <- partition.forecast(ppv, matrix)
+      clv <- clv
+      l <- partition.integrateProduct(ppv, clv)
+    yield l
+    val right = for
+      model <- model
+      matrix <- partition.matrix(model, t)
+      ppv <- ppv
+      clv <- clv
+      clv <- partition.backcast(clv, matrix)
+      l <- partition.integrateProduct(ppv, clv)
+    yield l
+    left <-> right
+
   def edgeLikelihoodConsistency(
       model: F[Model],
       ppv: F[Ppv],

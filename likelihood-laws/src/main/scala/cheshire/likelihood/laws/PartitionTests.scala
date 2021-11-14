@@ -125,6 +125,10 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
           "backcast product consistency" -> forAll(laws.backcastProductConsistency),
           "backcast product commutativity" -> forAll(laws.backcastProductCommutativity),
           "seed and integrate consistency" -> forAll(laws.seedAndIntegrateConsistency),
+          "forecast backcast consistency" -> forAll {
+            (model: F[Model], ppv: F[Ppv], clv: F[Clv], t: PositiveR) =>
+              laws.forecastBackcastConsistency(model, ppv, clv, t)
+          },
           "edge likelihood consistency" -> forAll {
             (model: F[Model], ppv: F[Ppv], clv: F[Clv], t: NonNegativeR) =>
               laws.edgeLikelihoodConsistency(model, ppv, clv, t)
