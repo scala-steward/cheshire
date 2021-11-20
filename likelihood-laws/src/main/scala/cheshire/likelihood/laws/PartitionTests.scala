@@ -30,6 +30,7 @@ import eu.timepit.refined.numeric.NonNegative
 import eu.timepit.refined.numeric.Positive
 import org.scalacheck.Arbitrary
 import org.scalacheck.Prop.forAll
+import org.scalacheck.util.Pretty
 import org.typelevel.discipline.Laws
 
 object PartitionTests:
@@ -61,7 +62,12 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
       Arbitrary[Params[R]],
       Arbitrary[NodeHeights[R]],
       Arbitrary[F[Ppv]],
-      Arbitrary[F[Clv]]): RuleSet =
+      Arbitrary[F[Clv]],
+      F[Model] => Pretty,
+      F[Matrix] => Pretty,
+      F[Ppv] => Pretty,
+      F[Clv] => Pretty
+  ): RuleSet =
 
     given arbModel: Arbitrary[F[Model]] = arbitraryModel(laws.partition)
     given arbMatrix: Arbitrary[F[Matrix]] = arbitraryMatrix(laws.partition)
