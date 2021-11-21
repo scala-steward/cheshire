@@ -30,7 +30,7 @@ val CatsEffectVersion = "3.2.9"
 val DisciplineVersion = "1.3.0"
 val RefinedVersion = "0.9.27"
 val ScodecBitsVersion = "1.1.29"
-val Specs2Version = "5.0.0-RC-20"
+val Specs2Version = "5.0.0-RC-21"
 val DisciplineSpecs2Version = "2.0-28-0698f3a"
 
 val commonSettings = Seq(
