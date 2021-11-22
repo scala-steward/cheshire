@@ -61,7 +61,7 @@ object NodeHeights:
     yield NodeHeights(leftHeight, rightHeight, parentHeight, t)
   )
 
-def arbitraryModel[F[_], R](partition: Partition[F, R])(
+transparent inline def arbitraryModel[F[_], R](partition: Partition[F, R])(
     using Arbitrary[Freqs[R]],
     Arbitrary[Params[R]],
     Arbitrary[R Refined Positive]): Arbitrary[F[partition.Model]] =
@@ -74,7 +74,7 @@ def arbitraryModel[F[_], R](partition: Partition[F, R])(
     yield partition.model(freqs, params, rate, alpha)
   )
 
-def arbitraryMatrix[F[_]: Monad, R](partition: Partition[F, R])(
+transparent inline def arbitraryMatrix[F[_]: Monad, R](partition: Partition[F, R])(
     using Arbitrary[F[partition.Model]],
     Arbitrary[R Refined NonNegative]): Arbitrary[F[partition.Matrix]] =
   Arbitrary(
