@@ -259,7 +259,7 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       leftClv <- partition.backcast(leftClv, leftMatrix)
       rightClv <- rightClv
       rightMatrix <- rightMatrix
-      rightClv <- partition.backcast(rightClv, leftMatrix)
+      rightClv <- partition.backcast(rightClv, rightMatrix)
       clv <- partition.product(leftClv, rightClv)
     yield clv
     left.widen <-> right.widen
