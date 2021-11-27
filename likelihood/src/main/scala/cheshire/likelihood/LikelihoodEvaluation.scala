@@ -18,18 +18,26 @@ package cheshire.likelihood
 
 import cats.Applicative
 import cats.kernel.Eq
+import cats.syntax.all.*
+import cats.~>
 
-trait LikelihoodEvaluation[R]:
-  def logLikelihood: R
-  def derivative: R
-  def secondDerivative: R
+trait LikelihoodEvaluation[F[_], R]:
+  outer =>
+  def logLikelihood: F[R]
+  def derivative: F[R]
+  def secondDerivative: F[R]
+  final def mapK[G[_]](f: F ~> G): LikelihoodEvaluation[G, R] =
+    new:
+      def logLikelihood = f(outer.logLikelihood)
+      def derivative = f(outer.derivative)
+      def secondDerivative = f(outer.secondDerivative)
 
 object LikelihoodEvaluation:
-  def apply[R](ll: R, d: R, dd: R): LikelihoodEvaluation[R] =
+  def apply[F[_]: Applicative, R](ll: R, d: R, dd: R): LikelihoodEvaluation[F, R] =
     new:
-      val logLikelihood = ll
-      val derivative = d
-      val secondDerivative = dd
+      val logLikelihood = ll.pure
+      val derivative = d.pure
+      val secondDerivative = dd.pure
 
-  given [R: Eq]: Eq[LikelihoodEvaluation[R]] =
+  given [F[_], R](using Eq[F[R]]): Eq[LikelihoodEvaluation[F, R]] =
     Eq.by(l => (l.logLikelihood, l.derivative, l.secondDerivative))

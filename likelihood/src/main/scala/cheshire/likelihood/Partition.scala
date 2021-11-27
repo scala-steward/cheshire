@@ -16,6 +16,7 @@
 
 package cheshire.likelihood
 
+import cats.effect.kernel.MonadCancelThrow
 import cats.effect.kernel.Resource
 import cats.effect.kernel.syntax.all.*
 import cats.syntax.all.*
@@ -60,7 +61,7 @@ trait Partition[F[_], R]:
 
   def seedAndIntegrate(model: Model, x: Clv): F[R]
 
-  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[R]]
+  def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(t: R): F[LikelihoodEvaluation[F, R]]
 
   def nodeLikelihood(
       model: Model,
@@ -69,7 +70,7 @@ trait Partition[F[_], R]:
       leftClv: Clv,
       leftHeight: R,
       rightClv: Clv,
-      rightHeight: R)(t: R): F[LikelihoodEvaluation[R]]
+      rightHeight: R)(t: R): F[LikelihoodEvaluation[F, R]]
 
 object Partition:
 
@@ -81,7 +82,7 @@ object Partition:
     type TipClv = TipClv0
   }
 
-  def fromKernel[F[_], R](partition: PartitionKernel[F, R]): Partition.Aux[
+  def fromKernel[F[_]: MonadCancelThrow, R](partition: PartitionKernel[F, R]): Partition.Aux[
     Resource[F, _],
     R,
     partition.Model,
@@ -139,8 +140,12 @@ object Partition:
         partition.seedAndIntegrate(model, x).toResource
 
       def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(
-          t: R): Resource[F, LikelihoodEvaluation[R]] =
-        partition.edgeLikelihood.flatMap(_(model, ppv, clv)).flatMap(_(t))
+          t: R): Resource[F, LikelihoodEvaluation[Resource[F, _], R]] =
+        partition
+          .edgeLikelihood
+          .flatMap(_(model, ppv, clv))
+          .flatMap(_(t))
+          .map(_.mapK(Resource.liftK))
 
       def nodeLikelihood(
           model: Model,
@@ -149,8 +154,9 @@ object Partition:
           leftClv: Clv,
           leftHeight: R,
           rightClv: Clv,
-          rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]] =
+          rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[Resource[F, _], R]] =
         partition
           .nodeLikelihood
           .flatMap(_(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight))
           .flatMap(_(t))
+          .map(_.mapK(Resource.liftK))
