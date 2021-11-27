@@ -328,7 +328,8 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       ppv <- ppv
       clv <- clv
       l <- partition.edgeLikelihood(model, ppv, clv)(t)
-    yield l.logLikelihood
+      ll <- l.logLikelihood
+    yield ll
     val right = for
       model <- model
       ppv <- ppv
@@ -344,7 +345,7 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       ppv: F[Ppv],
       clv: F[Clv],
       t: R
-  ): IsEq[F[LikelihoodEvaluation[R]]] =
+  ): IsEq[F[LikelihoodEvaluation[F, R]]] =
     val left = for
       model <- model
       ppv <- ppv
@@ -357,7 +358,7 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       clv <- clv
       l <- partition.edgeLikelihood(model, ppv, clv)(t).map(_.logLikelihood)
       f = (n: Int) =>
-        partition.edgeLikelihood(model, ppv, clv)(t + n * epsilon * t).map(_.logLikelihood)
+        partition.edgeLikelihood(model, ppv, clv)(t + n * epsilon * t).flatMap(_.logLikelihood)
       (y0, y1, y2, y3, y4) <- (f(-2), f(-1), f(0), f(1), f(2)).tupled
     yield finiteDifference(y0, y1, y2, y3, y4)
     left <-> right
@@ -385,7 +386,8 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
         leftHeight,
         rightClv,
         rightHeight)(t)
-    yield l.logLikelihood
+      ll <- l.logLikelihood
+    yield ll
     val right = for
       model <- model
       ppv <- ppv
@@ -409,7 +411,7 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       rightClv: F[Clv],
       rightHeight: R,
       t: R
-  ): IsEq[F[LikelihoodEvaluation[R]]] =
+  ): IsEq[F[LikelihoodEvaluation[F, R]]] =
     val left = for
       model <- model
       ppv <- ppv
@@ -433,12 +435,12 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
         partition
           .nodeLikelihood(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(
             t + n * epsilon * t)
-          .map(_.logLikelihood)
+          .flatMap(_.logLikelihood)
       (y0, y1, y2, y3, y4) <- (f(-2), f(-1), f(0), f(1), f(2)).tupled
     yield finiteDifference(y0, y1, y2, y3, y4)
     left <-> right
 
-  private def finiteDifference(y0: R, y1: R, y2: R, y3: R, y4: R): LikelihoodEvaluation[R] =
+  private def finiteDifference(y0: R, y1: R, y2: R, y3: R, y4: R): LikelihoodEvaluation[F, R] =
     val d = (y0 - 8 * y1 + 8 * y3 - y4) / (12 * epsilon)
     val dd = (-y0 + 16 * y1 - 30 * y2 + 16 * y3 - y4) / (12 * (epsilon ** 2))
     LikelihoodEvaluation(y2, d, dd)

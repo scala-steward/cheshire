@@ -52,7 +52,7 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
 
   def partition(
       using Eq[F[R]],
-      Eq[F[LikelihoodEvaluation[R]]],
+      Eq[F[LikelihoodEvaluation[F, R]]],
       Eq[F[Ppv]],
       Eq[F[Clv]],
       Arbitrary[R],
