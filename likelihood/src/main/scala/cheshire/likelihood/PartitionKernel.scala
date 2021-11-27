@@ -74,7 +74,10 @@ trait PartitionKernel[F[_], R]:
   def edgeLikelihood: Resource[F, EdgeLikelihood]
 
   trait EdgeLikelihood:
-    def apply(model: Model, ppv: Ppv, clv: Clv)(t: R): Resource[F, LikelihoodEvaluation[R]]
+    def apply(
+        model: Model,
+        ppv: Ppv,
+        clv: Clv): Resource[F, R => Resource[F, LikelihoodEvaluation[R]]]
 
   def nodeLikelihood: Resource[F, NodeLikelihood]
 
@@ -86,7 +89,7 @@ trait PartitionKernel[F[_], R]:
         leftClv: Clv,
         leftHeight: R,
         rightClv: Clv,
-        rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]]
+        rightHeight: R): Resource[F, R => Resource[F, LikelihoodEvaluation[R]]]
 
 object PartitionKernel:
 

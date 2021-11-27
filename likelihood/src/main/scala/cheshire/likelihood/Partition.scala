@@ -140,7 +140,7 @@ object Partition:
 
       def edgeLikelihood(model: Model, ppv: Ppv, clv: Clv)(
           t: R): Resource[F, LikelihoodEvaluation[R]] =
-        partition.edgeLikelihood.flatMap(_(model, ppv, clv)(t))
+        partition.edgeLikelihood.flatMap(_(model, ppv, clv)).flatMap(_(t))
 
       def nodeLikelihood(
           model: Model,
@@ -152,4 +152,5 @@ object Partition:
           rightHeight: R)(t: R): Resource[F, LikelihoodEvaluation[R]] =
         partition
           .nodeLikelihood
-          .flatMap(_(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(t))
+          .flatMap(_(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight))
+          .flatMap(_(t))
