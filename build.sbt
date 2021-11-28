@@ -24,7 +24,6 @@ replaceCommandAlias(
 )
 addCommandAlias("prePR", "; root/clean; +root/scalafmtAll; scalafmtSbt; +root/headerCreate")
 
-val AlgebraVersion = "2.2.3"
 val CatsVersion = "2.7.0"
 val CatsEffectVersion = "3.3.0"
 val DisciplineVersion = "1.3.0"
@@ -77,7 +76,7 @@ lazy val likelihoodLaws = project
   .settings(
     name := "cheshire-likelihood-laws",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "algebra" % AlgebraVersion,
+      "org.typelevel" %%% "algebra" % CatsVersion,
       "org.typelevel" %%% "cats-kernel-laws" % CatsVersion,
       "org.typelevel" %%% "discipline-core" % DisciplineVersion,
       "org.typelevel" %%% "cats-effect-laws" % CatsEffectVersion,
