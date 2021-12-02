@@ -17,6 +17,7 @@
 package cheshire.likelihood
 package laws.testkit
 
+import algebra.ring.Field
 import cats.Monad
 import cats.syntax.all.*
 import eu.timepit.refined.api.Refined
@@ -34,6 +35,8 @@ object Freqs:
       Freqs(x.map(_ / sum).toVector)
     }
   )
+  given [R](using R: Field[R]): Arbitrary[Freqs[R]] =
+    Arbitrary(given_Arbitrary_Freqs.arbitrary.map(f => Freqs(f.freqs.map(R.fromDouble))))
 
 final case class Params[R](params: IndexedSeq[R])
 object Params:
@@ -43,6 +46,8 @@ object Params:
       Params(x.map(_ / last).toVector)
     }
   )
+  given [R](using R: Field[R]): Arbitrary[Params[R]] =
+    Arbitrary(given_Arbitrary_Params.arbitrary.map(p => Params(p.params.map(R.fromDouble))))
 
 final case class NodeHeights[R](
     leftHeight: R,
@@ -60,6 +65,11 @@ object NodeHeights:
       t <- Gen.chooseNum(0, 1).map(maxChildHeight + (parentHeight - maxChildHeight) * _)
     yield NodeHeights(leftHeight, rightHeight, parentHeight, t)
   )
+  given [R](using R: Field[R]): Arbitrary[NodeHeights[R]] =
+    Arbitrary(given_Arbitrary_NodeHeights.arbitrary.map {
+      case NodeHeights(l, r, p, t) =>
+        NodeHeights(R.fromDouble(l), R.fromDouble(r), R.fromDouble(p), R.fromDouble(t))
+    })
 
 def arbitraryModel[F[_], R](partition: Partition[F, R])(
     using Arbitrary[Freqs[R]],
