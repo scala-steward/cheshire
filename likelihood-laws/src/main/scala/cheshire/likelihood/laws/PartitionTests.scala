@@ -50,7 +50,7 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
   import laws.F
   import laws.*
 
-  def partition(
+  def partition(epsilon: R)(
       using Eq[F[R]],
       Eq[F[LikelihoodEvaluation[F, R]]],
       Eq[F[Ppv]],
@@ -141,7 +141,7 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
           },
           "edge likelihood derivatives" -> forAll {
             (model: F[Model], ppv: F[Ppv], clv: F[Clv], t: NonNegativeR) =>
-              laws.edgeLikelihoodDerivatives(model, ppv, clv, t)
+              laws.edgeLikelihoodDerivatives(model, ppv, clv, t, epsilon)
           },
           "node likelihood consistency" -> forAll {
             (
@@ -179,6 +179,7 @@ trait PartitionTests[F[_], R: Order, Model, Matrix, Ppv, NodeClv, TipClv](
                 leftHeight,
                 rightClv,
                 rightHeight,
-                t)
+                t,
+                epsilon)
           }
         )
