@@ -17,6 +17,7 @@
 package cheshire.likelihood
 
 import cats.Applicative
+import cats.Functor
 import cats.kernel.Eq
 import cats.syntax.all.*
 import cats.~>
@@ -26,11 +27,16 @@ trait LikelihoodEvaluation[F[_], R]:
   def logLikelihood: F[R]
   def derivative: F[R]
   def secondDerivative: F[R]
-  final def mapK[G[_]](f: F ~> G): LikelihoodEvaluation[G, R] =
-    new:
-      def logLikelihood = f(outer.logLikelihood)
-      def derivative = f(outer.derivative)
-      def secondDerivative = f(outer.secondDerivative)
+
+  final def map[S](f: R => S)(using Functor[F]): LikelihoodEvaluation[F, S] = new:
+    def logLikelihood = outer.logLikelihood.map(f)
+    def derivative = outer.derivative.map(f)
+    def secondDerivative = outer.secondDerivative.map(f)
+
+  final def mapK[G[_]](f: F ~> G): LikelihoodEvaluation[G, R] = new:
+    def logLikelihood = f(outer.logLikelihood)
+    def derivative = f(outer.derivative)
+    def secondDerivative = f(outer.secondDerivative)
 
 object LikelihoodEvaluation:
   def apply[F[_]: Applicative, R](ll: R, d: R, dd: R): LikelihoodEvaluation[F, R] =
@@ -41,3 +47,7 @@ object LikelihoodEvaluation:
 
   given [F[_], R](using Eq[F[R]]): Eq[LikelihoodEvaluation[F, R]] =
     Eq.by(l => (l.logLikelihood, l.derivative, l.secondDerivative))
+
+  given [F[_]](using Functor[F]): Functor[LikelihoodEvaluation[F, _]] with
+    def map[A, B](fa: LikelihoodEvaluation[F, A])(f: A => B): LikelihoodEvaluation[F, B] =
+      fa.map(f)
