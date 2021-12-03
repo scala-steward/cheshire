@@ -358,7 +358,7 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       l <- partition.edgeLikelihood(model, ppv, clv)(t).map(_.logLikelihood)
       eps = epsilon * t
       f = (n: Int) =>
-        partition.edgeLikelihood(model, ppv, clv)(t + n * eps * t).flatMap(_.logLikelihood)
+        partition.edgeLikelihood(model, ppv, clv)(t + n * eps).flatMap(_.logLikelihood)
       (y0, y1, y2, y3, y4) <- (f(-2), f(-1), f(0), f(1), f(2)).tupled
     yield finiteDifference(eps)(y0, y1, y2, y3, y4)
     left <-> right
