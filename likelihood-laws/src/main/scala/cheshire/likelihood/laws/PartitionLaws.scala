@@ -444,6 +444,6 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
 
   private def finiteDifference(
       epsilon: R)(y0: R, y1: R, y2: R, y3: R, y4: R): LikelihoodEvaluation[F, R] =
-    val d = (y0 - 8 * y1 + 8 * y3 - y4) / (12 * epsilon)
-    val dd = (-y0 + 16 * y1 - 30 * y2 + 16 * y3 - y4) / (12 * (epsilon ** 2))
+    val d = R.sum(List(y0, -8 * y1, 8 * y3, -y4)) / (12 * epsilon)
+    val dd = R.sum(List(-y0, 16 * y1, -30 * y2, 16 * y3, -y4)) / (12 * (epsilon ** 2))
     LikelihoodEvaluation(y2, d, dd)
