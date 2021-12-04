@@ -338,31 +338,6 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
     yield l
     left <-> right
 
-  def edgeLikelihoodDerivatives(
-      model: F[Model],
-      ppv: F[Ppv],
-      clv: F[Clv],
-      t: R,
-      epsilon: R
-  ): IsEq[F[LikelihoodEvaluation[F, R]]] =
-    val left = for
-      model <- model
-      ppv <- ppv
-      clv <- clv
-      l <- partition.edgeLikelihood(model, ppv, clv)(t)
-    yield l
-    val right = for
-      model <- model
-      ppv <- ppv
-      clv <- clv
-      l <- partition.edgeLikelihood(model, ppv, clv)(t).map(_.logLikelihood)
-      eps = epsilon * t
-      f = (n: Int) =>
-        partition.edgeLikelihood(model, ppv, clv)(t + n * eps).flatMap(_.logLikelihood)
-      (y0, y1, y2, y3, y4) <- (f(-2), f(-1), f(0), f(1), f(2)).tupled
-    yield finiteDifference(eps)(y0, y1, y2, y3, y4)
-    left <-> right
-
   def nodeLikelihoodConsistency(
       model: F[Model],
       ppv: F[Ppv],
@@ -401,49 +376,3 @@ trait PartitionLaws[F[_], R, Model, Matrix, Ppv, NodeClv, TipClv](
       l <- partition.integrateProduct(ppv, clv)
     yield l
     left <-> right
-
-  def nodeLikelihoodDerivatives(
-      model: F[Model],
-      ppv: F[Ppv],
-      parentHeight: R,
-      leftClv: F[Clv],
-      leftHeight: R,
-      rightClv: F[Clv],
-      rightHeight: R,
-      t: R,
-      epsilon: R
-  ): IsEq[F[LikelihoodEvaluation[F, R]]] =
-    val left = for
-      model <- model
-      ppv <- ppv
-      leftClv <- leftClv
-      rightClv <- rightClv
-      l <- partition.nodeLikelihood(
-        model,
-        ppv,
-        parentHeight,
-        leftClv,
-        leftHeight,
-        rightClv,
-        rightHeight)(t)
-    yield l
-    val right = for
-      model <- model
-      ppv <- ppv
-      leftClv <- leftClv
-      rightClv <- rightClv
-      eps = t * epsilon
-      f = (n: Int) =>
-        partition
-          .nodeLikelihood(model, ppv, parentHeight, leftClv, leftHeight, rightClv, rightHeight)(
-            t + n * eps)
-          .flatMap(_.logLikelihood)
-      (y0, y1, y2, y3, y4) <- (f(-2), f(-1), f(0), f(1), f(2)).tupled
-    yield finiteDifference(eps)(y0, y1, y2, y3, y4)
-    left <-> right
-
-  private def finiteDifference(
-      epsilon: R)(y0: R, y1: R, y2: R, y3: R, y4: R): LikelihoodEvaluation[F, R] =
-    val d = R.sum(List(y0, -8 * y1, 8 * y3, -y4)) / (12 * epsilon)
-    val dd = R.sum(List(-y0, 16 * y1, -30 * y2, 16 * y3, -y4)) / (12 * (epsilon ** 2))
-    LikelihoodEvaluation(y2, d, dd)
