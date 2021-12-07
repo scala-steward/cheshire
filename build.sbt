@@ -30,7 +30,7 @@ val DisciplineVersion = "1.4.0"
 val RefinedVersion = "0.9.28"
 val ScodecBitsVersion = "1.1.30"
 val Specs2Version = "5.0.0-RC-22"
-val DisciplineSpecs2Version = "2.0-34-8c36a37"
+val DisciplineSpecs2Version = "2.0-44-19f6d7f"
 
 val commonSettings = Seq(
   scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future"),
