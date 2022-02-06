@@ -16,7 +16,7 @@ val CatsEffectVersion = "3.3.5"
 val DisciplineVersion = "1.4.0"
 val RefinedVersion = "0.9.28"
 val ScodecBitsVersion = "1.1.30"
-val Specs2Version = "5.0.0-RC-22"
+val Specs2Version = "5.0.0"
 val DisciplineSpecs2Version = "2.0-44-19f6d7f"
 
 ThisBuild / scalacOptions ++= Seq("-new-syntax", "-indent", "-source:future")
