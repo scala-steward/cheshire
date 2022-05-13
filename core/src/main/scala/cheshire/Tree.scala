@@ -179,10 +179,10 @@ object GenTree extends GenTreeInstances:
       else None
 
     def preOrder[F[_]](f: Button[N, L] => F[Unit])(using F: Monad[F]): F[Unit] =
-      f(this) >> (left.fold(F.unit)(_.preOrder(f)) *> right.fold(F.unit)(_.preOrder(f)))
+      f(this) >> left.fold(F.unit)(_.preOrder(f)) *> right.fold(F.unit)(_.preOrder(f))
 
     def postOrder[F[_]](f: Button[N, L] => F[Unit])(using F: Monad[F]): F[Unit] =
-      (left.fold(F.unit)(_.postOrder(f)) *> right.fold(F.unit)(_.postOrder(f))) >> f(this)
+      left.fold(F.unit)(_.postOrder(f)) *> right.fold(F.unit)(_.postOrder(f)) >> f(this)
 
     def preOrderSuccessor: Option[Button[N, L]] =
       left.orElse {
@@ -478,11 +478,11 @@ sealed abstract private[cheshire] class GenTreeInstances:
       override def apply: Apply[ZipTree] = summon[Apply[ZipTree]]
 
       override def parallel: Tree ~> ZipTree =
-        new (Tree ~> ZipTree):
+        new Tree ~> ZipTree:
           override def apply[A](fa: Tree[A]): ZipTree[A] = ZipTree(fa)
 
       override def sequential: ZipTree ~> Tree =
-        new (ZipTree ~> Tree):
+        new ZipTree ~> Tree:
           override def apply[A](fa: ZipTree[A]): Tree[A] = fa.value
 
   given [N: Show, L: Show]: Show[GenTree[N, L]] with

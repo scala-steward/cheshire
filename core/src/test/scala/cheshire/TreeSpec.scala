@@ -79,7 +79,7 @@ class GenTreeSpec extends Specification, Discipline, ScalaCheck:
   given [A, B](using arb: Arbitrary[Either[(A, B), Either[A, B]]]): Arbitrary[Ior[A, B]] =
     Arbitrary(
       arb.arbitrary.map {
-        case Left((a, b)) => Ior.both(a, b)
+        case Left(a, b) => Ior.both(a, b)
         case Right(ab) => Ior.fromEither(ab)
       }
     )
